@@ -38,7 +38,7 @@ function Home() {
         <div className="mx-auto grid max-w-6xl items-center gap-12 lg:grid-cols-2">
           <div className="animate-rise">
             <span className="glass inline-flex items-center gap-2 rounded-full px-4 py-2 text-xs tracking-wide uppercase">
-              <Flame className="size-3.5 text-primary" /> Toshkent · 2019 yildan beri
+              <Flame className="size-3.5 text-primary" /> Termiz · 2019 yildan beri
             </span>
             <h1 className="font-display mt-6 text-5xl leading-[0.95] font-bold sm:text-7xl">
               Hot-dog,
