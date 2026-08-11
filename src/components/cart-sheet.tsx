@@ -85,7 +85,8 @@ export function CartSheet() {
       <aside className="glass-strong animate-in slide-in-from-right relative flex h-full w-full max-w-md flex-col duration-400 sm:rounded-l-3xl">
         <div className="flex items-center justify-between border-b border-border px-6 py-5">
           <h2 className="font-display flex items-center gap-2 text-lg font-semibold">
-            <ShoppingBag className="size-5 text-primary" /> Sizning buyurtmangiz
+            <ShoppingBag className="size-5 text-primary" />{" "}
+            {formOpen ? "Buyurtmani rasmiylashtirish" : "Sizning buyurtmangiz"}
           </h2>
           <button
             onClick={() => setOpen(false)}
@@ -101,6 +102,56 @@ export function CartSheet() {
             <p className="py-16 text-center text-sm text-muted-foreground">
               Savatchangiz bo'sh — mazali taom qo'shing.
             </p>
+          </div>
+        ) : formOpen ? (
+          <div className="flex-1 space-y-4 overflow-y-auto px-6 py-5 pb-28 md:pb-10">
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-muted-foreground">Jami</span>
+              <span className="font-display text-xl font-semibold">
+                {formatSom(total)}
+              </span>
+            </div>
+            <div className="glass grid grid-cols-2 gap-1 rounded-full p-1">
+              {(["delivery", "pickup"] as const).map((m) => (
+                <button
+                  key={m}
+                  onClick={() => setMode(m)}
+                  className={`rounded-full py-2 text-sm font-medium transition-all ${
+                    mode === m
+                      ? "bg-ember-gradient text-primary-foreground"
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  {modeLabel[m]}
+                </button>
+              ))}
+            </div>
+            <input
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Ism familiya"
+              autoFocus
+              className="glass w-full rounded-2xl px-4 py-3 text-sm outline-none placeholder:text-muted-foreground focus:border-primary"
+            />
+            <input
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              placeholder="+998 90 123 45 67"
+              inputMode="tel"
+              className="glass w-full rounded-2xl px-4 py-3 text-sm outline-none placeholder:text-muted-foreground focus:border-primary"
+            />
+            <button
+              onClick={placeOrder}
+              className="bg-ember-gradient lift w-full rounded-2xl py-3.5 text-sm font-semibold text-primary-foreground"
+            >
+              Buyurtmani tasdiqlash
+            </button>
+            <button
+              onClick={() => setFormOpen(false)}
+              className="glass w-full rounded-2xl py-3 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+            >
+              Ortga
+            </button>
           </div>
         ) : (
           <>
@@ -165,58 +216,12 @@ export function CartSheet() {
                   {formatSom(total)}
                 </span>
               </div>
-              {formOpen ? (
-                <div className="space-y-3">
-                  <div className="glass grid grid-cols-2 gap-1 rounded-full p-1">
-                    {(["delivery", "pickup"] as const).map((m) => (
-                      <button
-                        key={m}
-                        onClick={() => setMode(m)}
-                        className={`rounded-full py-2 text-sm font-medium transition-all ${
-                          mode === m
-                            ? "bg-ember-gradient text-primary-foreground"
-                            : "text-muted-foreground hover:text-foreground"
-                        }`}
-                      >
-                        {modeLabel[m]}
-                      </button>
-                    ))}
-                  </div>
-                  <input
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    placeholder="Ism familiya"
-                    autoFocus
-                    className="glass w-full rounded-2xl px-4 py-3 text-sm outline-none placeholder:text-muted-foreground focus:border-primary"
-                  />
-                  <input
-                    value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
-                    placeholder="+998 90 123 45 67"
-                    inputMode="tel"
-                    className="glass w-full rounded-2xl px-4 py-3 text-sm outline-none placeholder:text-muted-foreground focus:border-primary"
-                  />
-                  <button
-                    onClick={placeOrder}
-                    className="bg-ember-gradient lift w-full rounded-2xl py-3.5 text-sm font-semibold text-primary-foreground"
-                  >
-                    Buyurtmani tasdiqlash
-                  </button>
-                  <button
-                    onClick={() => setFormOpen(false)}
-                    className="glass w-full rounded-2xl py-3 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
-                  >
-                    Ortga
-                  </button>
-                </div>
-              ) : (
-                <button
-                  onClick={() => setFormOpen(true)}
-                  className="bg-ember-gradient lift w-full rounded-2xl py-3.5 text-sm font-semibold text-primary-foreground"
-                >
-                  Buyurtmani rasmiylashtirish
-                </button>
-              )}
+              <button
+                onClick={() => setFormOpen(true)}
+                className="bg-ember-gradient lift w-full rounded-2xl py-3.5 text-sm font-semibold text-primary-foreground"
+              >
+                Buyurtmani rasmiylashtirish
+              </button>
             </div>
           </>
         )}
