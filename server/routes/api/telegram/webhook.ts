@@ -72,13 +72,18 @@ export default defineEventHandler(async (event) => {
     if (!chatId) return { ok: true };
 
     const from = body.message?.from;
-    const name = from?.first_name ?? from?.username ?? "mehmon";
+    const name = from?.first_name ?? from?.username ?? "mehmon"; // /start yoki /start connect_<code> — code bo'lsa web_app URL'iga qo'shamiz,
+    // shunda Mini App ulangach brauzer ham ulanishni ola oladi.
+    const startMatch = text
+      .trim()
+      .match(/^\/start(?:\s+connect_([A-Za-z0-9]+))?$/);
 
-    const isStart =
-      text.trim() === "/start" || /^\/start\s+connect$/.test(text.trim());
-
-    if (isStart) {
-      const appUrl = SITE_URL ? `${SITE_URL.replace(/\/+$/, "")}/profil` : "";
+    if (startMatch) {
+      const code = startMatch[1] ?? "";
+      const base = SITE_URL ? `${SITE_URL.replace(/\/+$/, "")}/profil` : "";
+      const appUrl = base
+        ? `${base}${code ? `?tg=${encodeURIComponent(code)}` : ""}`
+        : "";
       const messageText = appUrl
         ? `Assalomu alaykum, ${name}! 👋\n\n🌭 Janob Hot-Dog botiga xush kelibsiz!\n\nAkkountni ulash uchun quyidagi tugmani bosing — hammasi shu yerda bo'ladi, hech qayerga o'tib ketmaysiz:`
         : `Assalomu alaykum, ${name}! 👋\n\n🌭 Janob Hot-Dog botiga xush kelibsiz!`;

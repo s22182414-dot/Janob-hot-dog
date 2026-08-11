@@ -35,6 +35,21 @@ declare global {
 }
 
 const STORAGE_KEY = "janob_telegram";
+const CODE_KEY = "janob_tg_code";
+
+function randomCode(): string {
+  const arr = new Uint8Array(8);
+  crypto.getRandomValues(arr);
+  return Array.from(arr, (b) => b.toString(16).padStart(2, "0")).join("");
+}
+
+function ensureCode(): string {
+  const existing = localStorage.getItem(CODE_KEY);
+  if (existing) return existing;
+  const code = randomCode();
+  localStorage.setItem(CODE_KEY, code);
+  return code;
+}
 
 function parseInitDataUnsafeUser(
   u: TgUnsafeUser | undefined,
@@ -105,7 +120,34 @@ export function TelegramConnect() {
       return false;
     };
 
-    if (tryConnect()) return;
+    if (tryConnect()) {
+      // Mini App'da ulandik — agar code bo'lsa, serverga yozamiz,
+      // shunda saytga oddiy kirganda ham brauzer ulanishni oladi.
+      const params = new URLSearchParams(window.location.search);
+      const code = params.get("tg");
+      const webApp = window.Telegram?.WebApp;
+      if (code && webApp?.initData) {
+        const u = parseInitDataUser(webApp.initData);
+        if (u) {
+          fetch("/api/telegram/connect", {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({
+              code,
+              user: {
+                id: u.id,
+                first_name: u.first_name,
+                ...(u.username ? { username: u.username } : {}),
+              },
+            }),
+          }).catch(() => {
+            /* ignore */
+          });
+          window.history.replaceState({}, "", window.location.pathname);
+        }
+      }
+      return;
+    }
 
     // Telegram SDK hali mavjud bo'lmasa (ba'zi qurilmalarda kechikadi) —
     // rasmiy SDK'ni o'zimiz yuklaymiz va ulanishni qayta urinamiz.
@@ -118,10 +160,45 @@ export function TelegramConnect() {
     }
   }, []);
 
+  // Oddiy brauzerda (Telegram ichida emas): bot orqali ulangan bo'lsa,
+  // serverdan ulanishni olamiz — holat ikkala joyda bir xil bo'ladi.
+  useEffect(() => {
+    if (window.Telegram?.WebApp?.initData) return; // Mini App'da — yuqoridagi oqim
+    const code = localStorage.getItem(CODE_KEY);
+    if (!code) return;
+    (async () => {
+      try {
+        const res = await fetch(
+          `/api/telegram/connect?code=${encodeURIComponent(code)}`,
+        );
+        const data = (await res.json()) as {
+          ok?: boolean;
+          user?: TelegramUser;
+        };
+        if (data?.ok && data.user) {
+          const tgUser: TelegramUser = {
+            ...data.user,
+            auth_date: Math.floor(Date.now() / 1000),
+            hash: "",
+          };
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(tgUser));
+          setUser(tgUser);
+          toast.success("Telegram akkount ulandi! ✅");
+        }
+      } catch {
+        /* ignore */
+      } finally {
+        localStorage.removeItem(CODE_KEY);
+      }
+    })();
+  }, []);
+
   const startConnect = () => {
-    // Botni ochamiz — bot "Akkountni ulash" tugmasi bilan javob beradi
+    // Code yaratamiz — bot shu code bilan tugma yuboradi, ulanish serverda
+    // saqlanadi va saytga oddiy kirganda ham brauzer oladi.
+    const code = ensureCode();
     window.open(
-      `https://t.me/${config.telegramBot}?start=connect`,
+      `https://t.me/${config.telegramBot}?start=connect_${code}`,
       "_blank",
       "noopener",
     );
