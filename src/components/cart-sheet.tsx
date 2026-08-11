@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import {
   MessageCircle,
   Minus,
@@ -12,12 +12,6 @@ import { useCart } from "@/components/cart-context";
 import { config } from "@/lib/config";
 import { formatSom } from "@/data/menu";
 import { useTelegram } from "@/lib/use-telegram";
-declare global {
-  interface Window {
-    onTelegramAuth:
-      ((user: import("@/lib/use-telegram").TelegramUser) => void) | null;
-  }
-}
 
 export function CartSheet() {
   const { lines, total, count, open, setOpen, setQty, remove, clear } =
@@ -25,32 +19,7 @@ export function CartSheet() {
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [mode, setMode] = useState<"delivery" | "pickup">("delivery");
-  const { tg, connect } = useTelegram();
-  const [tgWidgetId] = useState(
-    () => `tg-cart-${Math.random().toString(36).slice(2, 7)}`,
-  );
-
-  useEffect(() => {
-    if (!open || tg || config.telegramBot === "YOUR_BOT_USERNAME") return;
-    const container = document.getElementById(tgWidgetId);
-    if (!container) return;
-    container.innerHTML = "";
-    const s = document.createElement("script");
-    s.src = "https://telegram.org/js/telegram-widget.js?22";
-    s.setAttribute("data-telegram-login", config.telegramBot);
-    s.setAttribute("data-size", "small");
-    s.setAttribute("data-radius", "10");
-    s.setAttribute("data-onauth", "onTelegramAuth(user)");
-    s.setAttribute("data-request-access", "write");
-    container.appendChild(s);
-  }, [open, tg, tgWidgetId]);
-
-  useEffect(() => {
-    window.onTelegramAuth = (user) => connect(user);
-    return () => {
-      window.onTelegramAuth = null;
-    };
-  }, [connect]);
+  const { tg } = useTelegram();
 
   if (!open) return null;
 
@@ -91,6 +60,23 @@ export function CartSheet() {
     setOpen(false);
   };
 
+  const startConnect = () => {
+    // Code yaratamiz — bot shu code bilan tugma yuboradi, ulanish serverda
+    // saqlanadi va saytga oddiy kirganda ham brauzer oladi.
+    let code = localStorage.getItem("janob_tg_code");
+    if (!code) {
+      const arr = new Uint8Array(8);
+      crypto.getRandomValues(arr);
+      code = Array.from(arr, (b) => b.toString(16).padStart(2, "0")).join("");
+      localStorage.setItem("janob_tg_code", code);
+    }
+    window.open(
+      `https://t.me/${config.telegramBot}?start=connect_${code}`,
+      "_blank",
+      "noopener",
+    );
+  };
+
   const modeLabel = {
     delivery: "Yetkazib berish",
     pickup: "Olib ketish",
@@ -117,125 +103,139 @@ export function CartSheet() {
           </button>
         </div>
 
-        <div className="flex-1 space-y-3 overflow-y-auto px-6 py-5">
-          {lines.length === 0 && (
+        {lines.length === 0 ? (
+          <div className="flex-1 overflow-y-auto px-6 py-5">
             <p className="py-16 text-center text-sm text-muted-foreground">
               Savatchangiz bo'sh — mazali taom qo'shing.
             </p>
-          )}
-          {lines.map((line) => (
-            <div
-              key={line.item.id}
-              className="glass flex gap-3 rounded-2xl p-3"
-            >
-              <img
-                src={line.item.image}
-                alt={line.item.name}
-                loading="lazy"
-                width={800}
-                height={800}
-                className="size-16 rounded-xl object-cover"
-              />
-              <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-medium">{line.item.name}</p>
-                <p className="text-sm text-primary">
-                  {formatSom(line.item.price)}
-                </p>
-                <div className="mt-2 flex items-center gap-2">
-                  <button
-                    onClick={() => setQty(line.item.id, line.qty - 1)}
-                    aria-label="Sonini kamaytirish"
-                    className="glass flex size-7 items-center justify-center rounded-full"
-                  >
-                    <Minus className="size-3" />
-                  </button>
-                  <span className="w-5 text-center text-sm">{line.qty}</span>
-                  <button
-                    onClick={() => setQty(line.item.id, line.qty + 1)}
-                    aria-label="Sonini oshirish"
-                    className="glass flex size-7 items-center justify-center rounded-full"
-                  >
-                    <Plus className="size-3" />
-                  </button>
-                  <button
-                    onClick={() => remove(line.item.id)}
-                    aria-label={`${line.item.name} ni o'chirish`}
-                    className="ml-auto text-muted-foreground transition-colors hover:text-destructive"
-                  >
-                    <Trash2 className="size-4" />
-                  </button>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-
-        {lines.length > 0 && (
-          <div className="space-y-4 border-t border-border px-6 pt-5 pb-24 md:pb-5">
-            <div className="glass grid grid-cols-2 gap-1 rounded-full p-1">
-              {(["delivery", "pickup"] as const).map((m) => (
-                <button
-                  key={m}
-                  onClick={() => setMode(m)}
-                  className={`rounded-full py-2 text-sm font-medium transition-all ${
-                    mode === m
-                      ? "bg-ember-gradient text-primary-foreground"
-                      : "text-muted-foreground hover:text-foreground"
-                  }`}
-                >
-                  {modeLabel[m]}
-                </button>
-              ))}
-            </div>
-            <input
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="Ismingiz"
-              className="glass w-full rounded-2xl px-4 py-3 text-sm outline-none placeholder:text-muted-foreground focus:border-primary"
-            />
-            <input
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-              placeholder="+998 90 123 45 67"
-              inputMode="tel"
-              className="glass w-full rounded-2xl px-4 py-3 text-sm outline-none placeholder:text-muted-foreground focus:border-primary"
-            />
-            <div className="flex items-center gap-3 rounded-2xl bg-amber-950/10 px-4 py-3">
-              <div className="flex min-w-0 flex-1 items-center gap-2.5">
-                <MessageCircle className="size-5 shrink-0 text-primary" />
-                <div className="min-w-0">
-                  <p
-                    className={`text-sm font-medium ${tg ? "text-emerald-400" : "text-muted-foreground"}`}
-                  >
-                    {tg ? `@${tg.username ?? tg.first_name}` : "Telegram"}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    {tg
-                      ? "Buyurtma holati xabarnomalari"
-                      : "Buyurtma holati haqida xabardor bo'ling"}
-                  </p>
-                </div>
-              </div>
-              {tg ? null : config.telegramBot !== "YOUR_BOT_USERNAME" ? (
-                <div
-                  id={tgWidgetId}
-                  className="shrink-0 [&_iframe]:!h-9 [&_iframe]:!w-[150px]"
-                />
-              ) : null}
-            </div>
-            <div className="flex items-center justify-between text-sm">
-              <span className="text-muted-foreground">Jami</span>
-              <span className="font-display text-xl font-semibold">
-                {formatSom(total)}
-              </span>
-            </div>
-            <button
-              onClick={placeOrder}
-              className="bg-ember-gradient lift w-full rounded-2xl py-3.5 text-sm font-semibold text-primary-foreground"
-            >
-              Buyurtma berish
-            </button>
           </div>
+        ) : (
+          <>
+            <div className="flex-1 space-y-5 overflow-y-auto px-6 py-5">
+              <div className="space-y-3">
+                {lines.map((line) => (
+                  <div
+                    key={line.item.id}
+                    className="glass flex gap-3 rounded-2xl p-3"
+                  >
+                    <img
+                      src={line.item.image}
+                      alt={line.item.name}
+                      loading="lazy"
+                      width={800}
+                      height={800}
+                      className="size-16 rounded-xl object-cover"
+                    />
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-medium">
+                        {line.item.name}
+                      </p>
+                      <p className="text-sm text-primary">
+                        {formatSom(line.item.price)}
+                      </p>
+                      <div className="mt-2 flex items-center gap-2">
+                        <button
+                          onClick={() => setQty(line.item.id, line.qty - 1)}
+                          aria-label="Sonini kamaytirish"
+                          className="glass flex size-7 items-center justify-center rounded-full"
+                        >
+                          <Minus className="size-3" />
+                        </button>
+                        <span className="w-5 text-center text-sm">
+                          {line.qty}
+                        </span>
+                        <button
+                          onClick={() => setQty(line.item.id, line.qty + 1)}
+                          aria-label="Sonini oshirish"
+                          className="glass flex size-7 items-center justify-center rounded-full"
+                        >
+                          <Plus className="size-3" />
+                        </button>
+                        <button
+                          onClick={() => remove(line.item.id)}
+                          aria-label={`${line.item.name} ni o'chirish`}
+                          className="ml-auto text-muted-foreground transition-colors hover:text-destructive"
+                        >
+                          <Trash2 className="size-4" />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="space-y-4 border-t border-border pt-5">
+                <div className="glass grid grid-cols-2 gap-1 rounded-full p-1">
+                  {(["delivery", "pickup"] as const).map((m) => (
+                    <button
+                      key={m}
+                      onClick={() => setMode(m)}
+                      className={`rounded-full py-2 text-sm font-medium transition-all ${
+                        mode === m
+                          ? "bg-ember-gradient text-primary-foreground"
+                          : "text-muted-foreground hover:text-foreground"
+                      }`}
+                    >
+                      {modeLabel[m]}
+                    </button>
+                  ))}
+                </div>
+                <input
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="Ismingiz"
+                  className="glass w-full rounded-2xl px-4 py-3 text-sm outline-none placeholder:text-muted-foreground focus:border-primary"
+                />
+                <input
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  placeholder="+998 90 123 45 67"
+                  inputMode="tel"
+                  className="glass w-full rounded-2xl px-4 py-3 text-sm outline-none placeholder:text-muted-foreground focus:border-primary"
+                />
+                <div className="flex items-center gap-3 rounded-2xl bg-amber-950/10 px-4 py-3">
+                  <div className="flex min-w-0 flex-1 items-center gap-2.5">
+                    <MessageCircle className="size-5 shrink-0 text-primary" />
+                    <div className="min-w-0">
+                      <p
+                        className={`text-sm font-medium ${tg ? "text-emerald-400" : "text-muted-foreground"}`}
+                      >
+                        {tg ? `@${tg.username ?? tg.first_name}` : "Telegram"}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {tg
+                          ? "Buyurtma holati xabarnomalari"
+                          : "Buyurtma holati haqida xabardor bo'ling"}
+                      </p>
+                    </div>
+                  </div>
+                  {tg ? null : config.telegramBot !== "YOUR_BOT_USERNAME" ? (
+                    <button
+                      onClick={startConnect}
+                      className="bg-ember-gradient shrink-0 rounded-full px-3.5 py-1.5 text-xs font-semibold text-primary-foreground"
+                    >
+                      Telegramga ulanish
+                    </button>
+                  ) : null}
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-4 border-t border-border px-6 pt-4 pb-24 md:pb-5">
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-muted-foreground">Jami</span>
+                <span className="font-display text-xl font-semibold">
+                  {formatSom(total)}
+                </span>
+              </div>
+              <button
+                onClick={placeOrder}
+                className="bg-ember-gradient lift w-full rounded-2xl py-3.5 text-sm font-semibold text-primary-foreground"
+              >
+                Buyurtma berish
+              </button>
+            </div>
+          </>
         )}
       </aside>
     </div>
