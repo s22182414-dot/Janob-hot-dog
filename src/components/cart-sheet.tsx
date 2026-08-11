@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   MessageCircle,
   Minus,
@@ -19,7 +19,13 @@ export function CartSheet() {
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [mode, setMode] = useState<"delivery" | "pickup">("delivery");
+  const [formOpen, setFormOpen] = useState(false);
   const { tg } = useTelegram();
+
+  // Savat yopilsa yoki bo'shab qolsa, rasmiylashtirish formasini tiklaymiz.
+  useEffect(() => {
+    if (!open || lines.length === 0) setFormOpen(false);
+  }, [open, lines.length]);
 
   if (!open) return null;
 
@@ -68,6 +74,7 @@ export function CartSheet() {
     clear();
     setName("");
     setPhone("");
+    setFormOpen(false);
     setOpen(false);
   };
 
@@ -191,19 +198,6 @@ export function CartSheet() {
                     </button>
                   ))}
                 </div>
-                <input
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  placeholder="Ismingiz"
-                  className="glass w-full rounded-2xl px-4 py-3 text-sm outline-none placeholder:text-muted-foreground focus:border-primary"
-                />
-                <input
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                  placeholder="+998 90 123 45 67"
-                  inputMode="tel"
-                  className="glass w-full rounded-2xl px-4 py-3 text-sm outline-none placeholder:text-muted-foreground focus:border-primary"
-                />
                 <div className="flex items-center gap-3 rounded-2xl bg-amber-950/10 px-4 py-3">
                   <div className="flex min-w-0 flex-1 items-center gap-2.5">
                     <MessageCircle className="size-5 shrink-0 text-primary" />
@@ -239,12 +233,43 @@ export function CartSheet() {
                   {formatSom(total)}
                 </span>
               </div>
-              <button
-                onClick={placeOrder}
-                className="bg-ember-gradient lift w-full rounded-2xl py-3.5 text-sm font-semibold text-primary-foreground"
-              >
-                Buyurtma berish
-              </button>
+              {formOpen ? (
+                <div className="space-y-3">
+                  <input
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    placeholder="Ism familiya"
+                    autoFocus
+                    className="glass w-full rounded-2xl px-4 py-3 text-sm outline-none placeholder:text-muted-foreground focus:border-primary"
+                  />
+                  <input
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                    placeholder="+998 90 123 45 67"
+                    inputMode="tel"
+                    className="glass w-full rounded-2xl px-4 py-3 text-sm outline-none placeholder:text-muted-foreground focus:border-primary"
+                  />
+                  <button
+                    onClick={placeOrder}
+                    className="bg-ember-gradient lift w-full rounded-2xl py-3.5 text-sm font-semibold text-primary-foreground"
+                  >
+                    Buyurtmani tasdiqlash
+                  </button>
+                  <button
+                    onClick={() => setFormOpen(false)}
+                    className="glass w-full rounded-2xl py-3 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+                  >
+                    Ortga
+                  </button>
+                </div>
+              ) : (
+                <button
+                  onClick={() => setFormOpen(true)}
+                  className="bg-ember-gradient lift w-full rounded-2xl py-3.5 text-sm font-semibold text-primary-foreground"
+                >
+                  Buyurtmani rasmiylashtirish
+                </button>
+              )}
             </div>
           </>
         )}
