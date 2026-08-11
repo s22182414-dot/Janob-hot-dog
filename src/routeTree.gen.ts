@@ -15,6 +15,7 @@ import { Route as AdminRouteImport } from './routes/admin'
 import { Route as ContactRouteImport } from './routes/contact'
 import { Route as MenuRouteImport } from './routes/menu'
 import { Route as ProfilRouteImport } from './routes/profil'
+import { Route as SavatRouteImport } from './routes/savat'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -46,6 +47,11 @@ const ProfilRoute = ProfilRouteImport.update({
   path: '/profil',
   getParentRoute: () => rootRouteImport,
 } as any)
+const SavatRoute = SavatRouteImport.update({
+  id: '/savat',
+  path: '/savat',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -54,6 +60,7 @@ export interface FileRoutesByFullPath {
   '/contact': typeof ContactRoute
   '/menu': typeof MenuRoute
   '/profil': typeof ProfilRoute
+  '/savat': typeof SavatRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -62,6 +69,7 @@ export interface FileRoutesByTo {
   '/contact': typeof ContactRoute
   '/menu': typeof MenuRoute
   '/profil': typeof ProfilRoute
+  '/savat': typeof SavatRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -71,13 +79,23 @@ export interface FileRoutesById {
   '/contact': typeof ContactRoute
   '/menu': typeof MenuRoute
   '/profil': typeof ProfilRoute
+  '/savat': typeof SavatRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/about' | '/admin' | '/contact' | '/menu' | '/profil'
+  fullPaths:
+    '/' | '/about' | '/admin' | '/contact' | '/menu' | '/profil' | '/savat'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/about' | '/admin' | '/contact' | '/menu' | '/profil'
-  id: '__root__' | '/' | '/about' | '/admin' | '/contact' | '/menu' | '/profil'
+  to: '/' | '/about' | '/admin' | '/contact' | '/menu' | '/profil' | '/savat'
+  id:
+    | '__root__'
+    | '/'
+    | '/about'
+    | '/admin'
+    | '/contact'
+    | '/menu'
+    | '/profil'
+    | '/savat'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -87,6 +105,7 @@ export interface RootRouteChildren {
   ContactRoute: typeof ContactRoute
   MenuRoute: typeof MenuRoute
   ProfilRoute: typeof ProfilRoute
+  SavatRoute: typeof SavatRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -133,6 +152,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ProfilRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/savat': {
+      id: '/savat'
+      path: '/savat'
+      fullPath: '/savat'
+      preLoaderRoute: typeof SavatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -143,6 +169,7 @@ const rootRouteChildren: RootRouteChildren = {
   ContactRoute: ContactRoute,
   MenuRoute: MenuRoute,
   ProfilRoute: ProfilRoute,
+  SavatRoute: SavatRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
