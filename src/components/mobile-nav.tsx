@@ -21,18 +21,19 @@ export function MobileNav() {
   const routerSearch = useRouterState({
     select: (s) => s.location.search,
   });
-  const { count, open, setOpen } = useCart();
+  const { count, setOpen } = useCart();
   const [pill, setPill] = useState<{ x: number; width: number } | null>(null);
 
   const homeRef = useRef<HTMLAnchorElement | null>(null);
   const profilRef = useRef<HTMLAnchorElement | null>(null);
-  const savatRef = useRef<HTMLButtonElement | null>(null);
+  const savatRef = useRef<HTMLAnchorElement | null>(null);
   const buyurtmaRef = useRef<HTMLAnchorElement | null>(null);
   const menyuRef = useRef<HTMLAnchorElement | null>(null);
 
   const isAdmin = !!matchRoute({ to: "/admin", fuzzy: false });
   const isHome = !!matchRoute({ to: "/", fuzzy: false });
   const isProfil = !!matchRoute({ to: "/profil", fuzzy: false });
+  const isSavat = !!matchRoute({ to: "/savat", fuzzy: false });
 
   const adminTab: AdminTab =
     isAdmin &&
@@ -49,7 +50,7 @@ export function MobileNav() {
     ? adminTab === "menyu"
       ? 1
       : 0
-    : open
+    : isSavat
       ? 2
       : isProfil
         ? 1
@@ -142,9 +143,10 @@ export function MobileNav() {
                   </Link>
                 );
               })}
-              <button
+              <Link
+                to="/savat"
                 ref={savatRef}
-                onClick={() => setOpen(!open)}
+                onClick={() => setOpen(false)}
                 aria-label="Savatni ochish"
                 className={`relative ${itemClass(activeIndex === 2)}`}
               >
@@ -155,7 +157,7 @@ export function MobileNav() {
                     {count}
                   </span>
                 )}
-              </button>
+              </Link>
             </>
           )}
         </div>
