@@ -1,5 +1,6 @@
 import { defineEventHandler, readBody } from "h3";
 import { addOrder, getOrders, type SavedOrder } from "../../lib/order-store";
+import { notifyOrder } from "../../lib/telegram-notify";
 
 export default defineEventHandler(async (event) => {
   try {
@@ -8,8 +9,17 @@ export default defineEventHandler(async (event) => {
       if (!body?.id || !body?.name || !Array.isArray(body?.lines)) {
         return { ok: false, error: "invalid order" };
       }
-      await addOrder(body);
-      return { ok: true, id: body.id };
+      // Ombor (KV/fayl) mavjud bo'lsa saqlaymiz; bo'lmasa ham
+      // buyurtma Telegram orqali egasiga yetkaziladi.
+      let persisted = false;
+      try {
+        await addOrder(body);
+        persisted = true;
+      } catch (error) {
+        console.error("Buyurtma omborga saqlanmadi:", error);
+      }
+      await notifyOrder(body);
+      return { ok: true, id: body.id, persisted };
     }
 
     // GET — buyurtmalar ro'yxati (admin panel uchun)

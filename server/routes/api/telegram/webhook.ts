@@ -98,7 +98,7 @@ export default defineEventHandler(async (event) => {
         // Oddiy /start — tugma/link berilmaydi, faqat ko'rsatma matni.
         const site = SITE_URL ? SITE_URL.replace(/\/+$/, "") : "";
         const messageText = site
-          ? `Assalomu alaykum, ${name}! 👋\n\n🌭 Janob Hot-Dog botiga xush kelibsiz!\n\nAkkountni ulash uchun saytimizga o'ting va profil sahifasidagi "Telegramdan kirish" tugmasini bosing:\n\n${site}/profil\n\nShundan keyin bot sizga ulanish tugmasini yuboradi.`
+          ? `Assalomu alaykum, ${name}! 👋\n\n🌭 Janob Hot-Dog botiga xush kelibsiz!\n\nAkkountni ulash uchun saytimizga o'ting va profil sahifasidagi "Telegramdan kirish" tugmasini bosing:\n\n${site}/profil\n\nShundan keyin bot sizga ulanish tugmasini yuboradi.\n\nℹ️ Sizning chat ID: ${chatId}`
           : `Assalomu alaykum, ${name}! 👋\n\n🌭 Janob Hot-Dog botiga xush kelibsiz!`;
         await sendMessage(chatId, messageText);
       }
