@@ -111,7 +111,7 @@ export function CartSheet() {
           <button
             onClick={() => setOpen(false)}
             aria-label="Yopish"
-            className="glass flex size-9 items-center justify-center rounded-full"
+            className="glass hidden size-9 items-center justify-center rounded-full sm:flex"
           >
             <X className="size-4" />
           </button>
