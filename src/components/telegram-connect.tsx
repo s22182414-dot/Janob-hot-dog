@@ -232,21 +232,16 @@ export function TelegramConnect() {
             <Check className="size-4 shrink-0" />
             Akkount ulandi: @{user.username ?? user.first_name}
           </p>
-          {inWebApp ? (
-            <button
-              onClick={() => window.Telegram?.WebApp.close()}
-              className="bg-ember-gradient lift flex w-full items-center justify-center gap-2 rounded-xl py-3 text-sm font-semibold text-primary-foreground"
-            >
-              <Send className="size-4" /> Telegram'ga qaytish
-            </button>
-          ) : (
-            <button
-              onClick={disconnect}
-              className="glass flex w-full items-center justify-center gap-2 rounded-xl py-3 text-sm font-medium transition-colors hover:bg-destructive hover:text-destructive-foreground"
-            >
-              <X className="size-4" /> Ulanishni uzish
-            </button>
-          )}
+          <button
+            onClick={() => {
+              disconnect();
+              // Telegram ichida ochilgan bo'lsa, uzgach chatga qaytamiz.
+              if (inWebApp) window.Telegram?.WebApp.close();
+            }}
+            className="glass flex w-full items-center justify-center gap-2 rounded-xl py-3 text-sm font-medium transition-colors hover:bg-destructive hover:text-destructive-foreground"
+          >
+            <X className="size-4" /> Ulanishni uzish
+          </button>
         </div>
       ) : (
         <div className="mt-4">

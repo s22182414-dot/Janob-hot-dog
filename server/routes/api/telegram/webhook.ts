@@ -59,9 +59,10 @@ async function sendMessage(
 /**
  * Telegram webhook.
  *
- * /start (yoki /start connect) — salomlashish + "🔗 Akkountni ulash" tugmasi.
- * Tugma web_app turida: Telegram ichida Mini App (profil sahifasi) ochiladi,
- * foydalanuvchi hech qayerga o'tib ketmaydi — initData orqali akkount ulanadi.
+ * /start connect_<code> — website'dan boshlangan oqim: "🔗 Akkountni ulash"
+ * tugmasi (web_app) yuboriladi — Telegram ichida Mini App (profil sahifasi)
+ * ochiladi, foydalanuvchi hech qayerga o'tib ketmaydi.
+ * /start (oddiy) — tugma/link berilmaydi, faqat saytga yo'naltiruvchi matn.
  */
 export default defineEventHandler(async (event) => {
   try {
@@ -84,20 +85,23 @@ export default defineEventHandler(async (event) => {
       const appUrl = base
         ? `${base}${code ? `?tg=${encodeURIComponent(code)}` : ""}`
         : "";
-      const messageText = appUrl
-        ? `Assalomu alaykum, ${name}! 👋\n\n🌭 Janob Hot-Dog botiga xush kelibsiz!\n\nAkkountni ulash uchun quyidagi tugmani bosing — hammasi shu yerda bo'ladi, hech qayerga o'tib ketmaysiz:`
-        : `Assalomu alaykum, ${name}! 👋\n\n🌭 Janob Hot-Dog botiga xush kelibsiz!`;
-      await sendMessage(
-        chatId,
-        messageText,
-        appUrl
-          ? {
-              inline_keyboard: [
-                [{ text: "🔗 Akkountni ulash", web_app: { url: appUrl } }],
-              ],
-            }
-          : undefined,
-      );
+
+      if (code && appUrl) {
+        // Website'dan kelgan oqim (connect_<code>) — shundagina tugma beramiz.
+        const messageText = `Assalomu alaykum, ${name}! 👋\n\n🌭 Janob Hot-Dog botiga xush kelibsiz!\n\nAkkountni ulash uchun quyidagi tugmani bosing — hammasi shu yerda bo'ladi, hech qayerga o'tib ketmaysiz:`;
+        await sendMessage(chatId, messageText, {
+          inline_keyboard: [
+            [{ text: "🔗 Akkountni ulash", web_app: { url: appUrl } }],
+          ],
+        });
+      } else {
+        // Oddiy /start — tugma/link berilmaydi, faqat ko'rsatma matni.
+        const site = SITE_URL ? SITE_URL.replace(/\/+$/, "") : "";
+        const messageText = site
+          ? `Assalomu alaykum, ${name}! 👋\n\n🌭 Janob Hot-Dog botiga xush kelibsiz!\n\nAkkountni ulash uchun saytimizga o'ting va profil sahifasidagi "Telegramdan kirish" tugmasini bosing:\n\n${site}/profil\n\nShundan keyin bot sizga ulanish tugmasini yuboradi.`
+          : `Assalomu alaykum, ${name}! 👋\n\n🌭 Janob Hot-Dog botiga xush kelibsiz!`;
+        await sendMessage(chatId, messageText);
+      }
     }
 
     return { ok: true };
