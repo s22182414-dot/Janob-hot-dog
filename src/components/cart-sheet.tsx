@@ -84,12 +84,14 @@ export function CartSheet() {
 
   return (
     <div className="fixed inset-0 z-100 flex justify-end">
+      {/* Telefon rejimida savat alohida sahifa — fon qorayishi yo'q,
+          to'liq ekran ochiladi. Kompyuterda yondan chiqadigan modal. */}
       <button
         aria-label="Buyurtma panelini yopish"
         onClick={() => setOpen(false)}
-        className="animate-in fade-in absolute inset-0 bg-background/70 backdrop-blur-sm duration-300"
+        className="animate-in fade-in absolute inset-0 hidden bg-background/70 backdrop-blur-sm duration-300 sm:block"
       />
-      <aside className="glass-strong animate-in slide-in-from-right relative flex h-full w-full max-w-md flex-col duration-400 sm:rounded-l-3xl">
+      <aside className="glass-strong animate-in slide-in-from-right relative flex h-full w-full flex-col duration-400 sm:max-w-md sm:rounded-l-3xl">
         <div className="flex items-center justify-between border-b border-border px-6 py-5">
           <h2 className="font-display flex items-center gap-2 text-lg font-semibold">
             <ShoppingBag className="size-5 text-primary" />{" "}
