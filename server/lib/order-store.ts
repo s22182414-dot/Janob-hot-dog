@@ -6,6 +6,8 @@ export type SavedOrder = {
   name: string;
   phone: string;
   mode: "delivery" | "pickup";
+  payment?: "cash" | "card";
+  address?: string;
   lines: { name: string; qty: number; price: number }[];
   total: number;
   createdAt: number;

@@ -11,6 +11,8 @@ export function CartSheet() {
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [mode, setMode] = useState<"delivery" | "pickup">("delivery");
+  const [payment, setPayment] = useState<"cash" | "card">("cash");
+  const [address, setAddress] = useState("");
   const [formOpen, setFormOpen] = useState(false);
   const { tg } = useTelegram();
 
@@ -26,11 +28,17 @@ export function CartSheet() {
       toast.error("Iltimos, ismingiz va telefon raqamingizni kiriting");
       return;
     }
+    if (mode === "delivery" && !address.trim()) {
+      toast.error("Iltimos, yetkazib berish manzilini kiriting");
+      return;
+    }
     const order = {
       id: Date.now().toString(36),
       name: name.trim(),
       phone: phone.trim(),
       mode,
+      payment,
+      ...(mode === "delivery" ? { address: address.trim() } : {}),
       lines: lines.map((l) => ({
         name: l.item.name,
         qty: l.qty,
@@ -66,6 +74,8 @@ export function CartSheet() {
     clear();
     setName("");
     setPhone("");
+    setAddress("");
+    setPayment("cash");
     setFormOpen(false);
     setOpen(false);
   };
@@ -73,6 +83,11 @@ export function CartSheet() {
   const modeLabel = {
     delivery: "Yetkazib berish",
     pickup: "Olib ketish",
+  } as const;
+
+  const paymentLabel = {
+    cash: "Naqd pul",
+    card: "Karta",
   } as const;
 
   return (
@@ -140,6 +155,31 @@ export function CartSheet() {
               inputMode="tel"
               className="glass w-full rounded-2xl px-4 py-3 text-sm outline-none placeholder:text-muted-foreground focus:border-primary"
             />
+            {mode === "delivery" && (
+              <>
+                <div className="glass grid grid-cols-2 gap-1 rounded-full p-1">
+                  {(["cash", "card"] as const).map((p) => (
+                    <button
+                      key={p}
+                      onClick={() => setPayment(p)}
+                      className={`rounded-full py-2 text-sm font-medium transition-all ${
+                        payment === p
+                          ? "bg-ember-gradient text-primary-foreground"
+                          : "text-muted-foreground hover:text-foreground"
+                      }`}
+                    >
+                      {paymentLabel[p]}
+                    </button>
+                  ))}
+                </div>
+                <input
+                  value={address}
+                  onChange={(e) => setAddress(e.target.value)}
+                  placeholder="Manzilingiz (masalan: Chilonzor 20, 12-uy)"
+                  className="glass w-full rounded-2xl px-4 py-3 text-sm outline-none placeholder:text-muted-foreground focus:border-primary"
+                />
+              </>
+            )}
             <button
               onClick={placeOrder}
               className="bg-ember-gradient lift w-full rounded-2xl py-3.5 text-sm font-semibold text-primary-foreground"
