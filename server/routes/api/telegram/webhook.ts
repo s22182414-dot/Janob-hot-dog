@@ -1,5 +1,4 @@
 import { defineEventHandler, readBody } from "h3";
-import { setPendingLink } from "../../../lib/tg-store";
 
 const BOT_TOKEN = process.env["TELEGRAM_BOT_TOKEN"] ?? "";
 const SITE_URL = process.env["SITE_URL"] ?? "";
@@ -9,15 +8,20 @@ type TelegramUpdate = {
     chat: { id: number };
     text?: string;
     from?: {
-      id?: number;
       first_name?: string;
       username?: string;
     };
   };
 };
 
+type InlineButton = {
+  text: string;
+  url?: string;
+  web_app?: { url: string };
+};
+
 type ReplyMarkup = {
-  inline_keyboard: { text: string; url: string }[][];
+  inline_keyboard: InlineButton[][];
 };
 
 async function sendMessage(
@@ -55,9 +59,9 @@ async function sendMessage(
 /**
  * Telegram webhook.
  *
- * - /start              → salomlashish xabari
- * - /start connect_XXX  → akkount ulash oqimi: foydalanuvchini saqlab,
- *   "Akkountni ulash" tugmasi (saytga qaytaruvchi havola) bilan javob beradi.
+ * /start (yoki /start connect) — salomlashish + "🔗 Akkountni ulash" tugmasi.
+ * Tugma web_app turida: Telegram ichida Mini App (profil sahifasi) ochiladi,
+ * foydalanuvchi hech qayerga o'tib ketmaydi — initData orqali akkount ulanadi.
  */
 export default defineEventHandler(async (event) => {
   try {
@@ -70,42 +74,24 @@ export default defineEventHandler(async (event) => {
     const from = body.message?.from;
     const name = from?.first_name ?? from?.username ?? "mehmon";
 
-    // Akkount ulash oqimi: /start connect_<token>
-    const connectMatch = text
-      .trim()
-      .match(/^\/start\s+connect_([A-Za-z0-9]+)$/);
-    if (connectMatch) {
-      const token = connectMatch[1] ?? "";
-      setPendingLink(token, {
-        chatId,
-        ...(from?.id !== undefined ? { tgId: from.id } : {}),
-        ...(from?.first_name ? { firstName: from.first_name } : {}),
-        ...(from?.username ? { username: from.username } : {}),
-        createdAt: Date.now(),
-      });
+    const isStart =
+      text.trim() === "/start" || /^\/start\s+connect$/.test(text.trim());
 
-      const linkUrl = SITE_URL
-        ? `${SITE_URL.replace(/\/+$/, "")}/profil?tg=${encodeURIComponent(token)}`
-        : "";
-      const text = linkUrl
-        ? `Assalomu alaykum, ${name}! 👋\n\nAkkountni ulash uchun quyidagi tugmani bosing:`
-        : `Assalomu alaykum, ${name}! 👋\n\nAkkountni ulash uchun sayt manzili sozlanmagan (SITE_URL). Administratorga murojaat qiling.`;
+    if (isStart) {
+      const appUrl = SITE_URL ? `${SITE_URL.replace(/\/+$/, "")}/profil` : "";
+      const messageText = appUrl
+        ? `Assalomu alaykum, ${name}! 👋\n\n🌭 Janob Hot-Dog botiga xush kelibsiz!\n\nAkkountni ulash uchun quyidagi tugmani bosing — hammasi shu yerda bo'ladi, hech qayerga o'tib ketmaysiz:`
+        : `Assalomu alaykum, ${name}! 👋\n\n🌭 Janob Hot-Dog botiga xush kelibsiz!`;
       await sendMessage(
         chatId,
-        text,
-        linkUrl
+        messageText,
+        appUrl
           ? {
-              inline_keyboard: [[{ text: "🔗 Akkountni ulash", url: linkUrl }]],
+              inline_keyboard: [
+                [{ text: "🔗 Akkountni ulash", web_app: { url: appUrl } }],
+              ],
             }
           : undefined,
-      );
-      return { ok: true };
-    }
-
-    if (text.trim() === "/start") {
-      await sendMessage(
-        chatId,
-        `Assalomu alaykum, ${name}! 👋\n\n🌭 Janob Hot-Dog botiga xush kelibsiz!\n\nBuyurtma holati va yangiliklar haqidagi xabarlar aynan shu bot orqali keladi.`,
       );
     }
 

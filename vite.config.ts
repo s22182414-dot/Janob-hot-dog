@@ -13,10 +13,6 @@ export default defineConfig({
           route: "/api/telegram/webhook",
           handler: "./server/routes/api/telegram/webhook.ts",
         },
-        {
-          route: "/api/telegram/link",
-          handler: "./server/routes/api/telegram/link.ts",
-        },
       ],
     }),
     tanstackStart({

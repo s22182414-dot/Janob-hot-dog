@@ -1,5 +1,5 @@
 import { config } from "@/lib/config";
-import { Loader, Send, X } from "lucide-react";
+import { Check, Send, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
@@ -13,18 +13,45 @@ type TelegramUser = {
   hash: string;
 };
 
-const STORAGE_KEY = "janob_telegram";
-const PENDING_KEY = "janob_tg_pending";
+declare global {
+  interface Window {
+    Telegram?: {
+      WebApp: {
+        initData: string;
+        ready: () => void;
+        close: () => void;
+      };
+    };
+  }
+}
 
-function randomToken(): string {
-  const arr = new Uint8Array(8);
-  crypto.getRandomValues(arr);
-  return Array.from(arr, (b) => b.toString(16).padStart(2, "0")).join("");
+const STORAGE_KEY = "janob_telegram";
+
+function parseInitDataUser(initData: string): TelegramUser | null {
+  try {
+    const params = new URLSearchParams(initData);
+    const raw = params.get("user");
+    if (!raw) return null;
+    const u = JSON.parse(raw) as Partial<TelegramUser>;
+    if (!u.id) return null;
+    return {
+      id: u.id,
+      first_name: u.first_name ?? "",
+      ...(u.last_name ? { last_name: u.last_name } : {}),
+      ...(u.username ? { username: u.username } : {}),
+      ...(u.photo_url ? { photo_url: u.photo_url } : {}),
+      auth_date: Number(
+        params.get("auth_date") ?? Math.floor(Date.now() / 1000),
+      ),
+      hash: params.get("hash") ?? "",
+    };
+  } catch {
+    return null;
+  }
 }
 
 export function TelegramConnect() {
   const [user, setUser] = useState<TelegramUser | null>(null);
-  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     try {
@@ -35,61 +62,24 @@ export function TelegramConnect() {
     }
   }, []);
 
-  // Bot tugmasi bosilgach sayt /profil?tg=<token> da ochiladi — shu yerda ulanamiz.
+  // Telegram Mini App ichida ochilganda initData orqali avtomatik ulanamiz —
+  // foydalanuvchi hech qayerga o'tib ketmaydi, hammasi Telegram ichida bo'ladi.
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const token = params.get("tg");
-    if (!token) return;
-
-    const pending = localStorage.getItem(PENDING_KEY);
-    const done = () => {
-      localStorage.removeItem(PENDING_KEY);
-      window.history.replaceState({}, "", window.location.pathname);
-    };
-
-    if (pending !== token) {
-      // Token biznikiga to'g'ri kelmadi — faqat URL'ni tozalaymiz.
-      done();
-      return;
+    const webApp = window.Telegram?.WebApp;
+    if (!webApp || !webApp.initData) return;
+    webApp.ready();
+    const tgUser = parseInitDataUser(webApp.initData);
+    if (tgUser) {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(tgUser));
+      setUser(tgUser);
+      toast.success("Telegram akkount ulandi! ✅");
     }
-
-    setLoading(true);
-    (async () => {
-      try {
-        const res = await fetch(
-          `/api/telegram/link?token=${encodeURIComponent(token)}`,
-        );
-        const data = (await res.json()) as {
-          ok?: boolean;
-          user?: TelegramUser;
-        };
-        if (data?.ok && data.user) {
-          const tgUser: TelegramUser = {
-            ...data.user,
-            auth_date: Math.floor(Date.now() / 1000),
-            hash: "",
-          };
-          localStorage.setItem(STORAGE_KEY, JSON.stringify(tgUser));
-          setUser(tgUser);
-          toast.success("Telegram akkount ulandi! ✅");
-        } else {
-          toast.error("Ulanish amalga oshmadi. Qaytadan urinib ko'ring.");
-        }
-      } catch {
-        toast.error("Ulanish amalga oshmadi. Qaytadan urinib ko'ring.");
-      } finally {
-        setLoading(false);
-        done();
-      }
-    })();
   }, []);
 
   const startConnect = () => {
-    const token = randomToken();
-    localStorage.setItem(PENDING_KEY, token);
-    // Foydalanuvchini botga yo'naltiramiz — bot tugma yuboradi.
+    // Botni ochamiz — bot "Akkountni ulash" tugmasi bilan javob beradi
     window.open(
-      `https://t.me/${config.telegramBot}?start=connect_${token}`,
+      `https://t.me/${config.telegramBot}?start=connect`,
       "_blank",
       "noopener",
     );
@@ -100,6 +90,8 @@ export function TelegramConnect() {
     setUser(null);
     toast.success("Telegram akkount uzildi");
   };
+
+  const inWebApp = typeof window !== "undefined" && !!window.Telegram?.WebApp;
 
   return (
     <div className="glass animate-rise mt-6 rounded-3xl p-5">
@@ -116,12 +108,27 @@ export function TelegramConnect() {
       </div>
 
       {user ? (
-        <button
-          onClick={disconnect}
-          className="glass mt-4 flex w-full items-center justify-center gap-2 rounded-xl py-3 text-sm font-medium transition-colors hover:bg-destructive hover:text-destructive-foreground"
-        >
-          <X className="size-4" /> Ulanishni uzish
-        </button>
+        <div className="mt-4 space-y-3">
+          <p className="flex items-center gap-2 rounded-xl bg-emerald-500/10 px-4 py-3 text-sm text-emerald-400">
+            <Check className="size-4 shrink-0" />
+            Akkount ulandi: @{user.username ?? user.first_name}
+          </p>
+          {inWebApp ? (
+            <button
+              onClick={() => window.Telegram?.WebApp.close()}
+              className="bg-ember-gradient lift flex w-full items-center justify-center gap-2 rounded-xl py-3 text-sm font-semibold text-primary-foreground"
+            >
+              <Send className="size-4" /> Telegram'ga qaytish
+            </button>
+          ) : (
+            <button
+              onClick={disconnect}
+              className="glass flex w-full items-center justify-center gap-2 rounded-xl py-3 text-sm font-medium transition-colors hover:bg-destructive hover:text-destructive-foreground"
+            >
+              <X className="size-4" /> Ulanishni uzish
+            </button>
+          )}
+        </div>
       ) : (
         <div className="mt-4">
           {config.telegramBot === "YOUR_BOT_USERNAME" ? (
@@ -135,15 +142,9 @@ export function TelegramConnect() {
           ) : (
             <button
               onClick={startConnect}
-              disabled={loading}
-              className="bg-ember-gradient flex w-full items-center justify-center gap-2 rounded-xl py-3 text-sm font-semibold text-primary-foreground transition-opacity disabled:opacity-60"
+              className="bg-ember-gradient flex w-full items-center justify-center gap-2 rounded-xl py-3 text-sm font-semibold text-primary-foreground"
             >
-              {loading ? (
-                <Loader className="size-4 animate-spin" />
-              ) : (
-                <Send className="size-4" />
-              )}
-              {loading ? "Ulanmoqda..." : "Telegramga ulanish"}
+              <Send className="size-4" /> Telegramga ulanish
             </button>
           )}
           <p className="mt-3 text-center text-xs text-muted-foreground">
@@ -151,7 +152,7 @@ export function TelegramConnect() {
             <span className="font-medium text-foreground">
               "Akkountni ulash"
             </span>{" "}
-            tugmasini bosing va akkount ulanadi.
+            tugmasini bosing va akkount ulanadi (hech qayerga o'tib ketmaysiz).
           </p>
         </div>
       )}
