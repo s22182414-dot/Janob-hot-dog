@@ -21,6 +21,10 @@ export default defineConfig({
           route: "/api/orders",
           handler: "./server/routes/api/orders.ts",
         },
+        {
+          route: "/api/admin/tg-auth",
+          handler: "./server/routes/api/admin/tg-auth.ts",
+        },
       ],
     }),
     tanstackStart({

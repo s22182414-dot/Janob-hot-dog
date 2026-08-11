@@ -13,6 +13,7 @@ import {
 import { useCallback, useEffect, useState } from "react";
 import { MenuManager } from "@/components/menu-manager";
 import { config } from "@/lib/config";
+import { loadTelegramWebApp } from "@/lib/telegram-webapp";
 import { formatSom } from "@/data/menu";
 
 export const Route = createFileRoute("/admin")({
@@ -113,6 +114,39 @@ function AdminPage() {
       window.removeEventListener("focus", onFocus);
     };
   }, [authed, refreshOrders]);
+
+  // Telegram bot orqali (/admin → Mini App) ochilganda — egasi avtomatik
+  // kiradi: initData serverda tekshiriladi (faqat OWNER_CHAT_ID mos bo'lsa).
+  useEffect(() => {
+    if (authed) return;
+    let cancelled = false;
+    (async () => {
+      const webApp = await loadTelegramWebApp();
+      if (cancelled || !webApp?.initData) return;
+      webApp.ready();
+      webApp.expand();
+      webApp.setHeaderColor("#1a1412");
+      webApp.setBackgroundColor("#1a1412");
+      try {
+        const res = await fetch("/api/admin/tg-auth", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ initData: webApp.initData }),
+        });
+        const data = (await res.json()) as { ok?: boolean };
+        if (!cancelled && data?.ok) {
+          sessionStorage.setItem(AUTH_KEY, "1");
+          setAuthed(true);
+          setOrders(loadOrders());
+        }
+      } catch {
+        /* ignore */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [authed]);
 
   if (!authed) {
     return (

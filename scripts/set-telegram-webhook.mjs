@@ -39,3 +39,26 @@ if (data.ok) {
   console.error("❌ Xatolik:", data.description ?? data);
   process.exit(1);
 }
+
+// Bot menyusidagi buyruqlar: /start va /admin
+const cmdRes = await fetch(
+  `https://api.telegram.org/bot${token}/setMyCommands`,
+  {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({
+      commands: [
+        { command: "start", description: "Boshlash va akkountni ulash" },
+        { command: "admin", description: "Admin panel" },
+      ],
+    }),
+  },
+);
+const cmdData = await cmdRes.json();
+
+if (cmdData.ok) {
+  console.log("✅ Buyruqlar o'rnatildi: /start, /admin");
+} else {
+  console.error("❌ setMyCommands xatoligi:", cmdData.description ?? cmdData);
+  process.exit(1);
+}
