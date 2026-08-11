@@ -1,0 +1,162 @@
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import {
+  Outlet,
+  Link,
+  createRootRouteWithContext,
+  useRouter,
+  HeadContent,
+  Scripts,
+} from "@tanstack/react-router";
+import { type ReactNode } from "react";
+
+import appCss from "../styles.css?url";
+import { CartProvider } from "@/components/cart-context";
+import { CartSheet } from "@/components/cart-sheet";
+import { SiteHeader } from "@/components/site-header";
+import { MobileNav } from "@/components/mobile-nav";
+import { SiteFooter } from "@/components/site-footer";
+import { Toaster } from "@/components/ui/sonner";
+
+function NotFoundComponent() {
+  return (
+    <div className="flex min-h-screen items-center justify-center bg-background px-4">
+      <div className="max-w-md text-center">
+        <h1 className="text-7xl font-bold text-foreground">404</h1>
+        <h2 className="mt-4 text-xl font-semibold text-foreground">
+          Sahifa topilmadi
+        </h2>
+        <p className="mt-2 text-sm text-muted-foreground">
+          Siz qidirayotgan sahifa mavjud emas yoki ko'chirilgan.
+        </p>
+        <div className="mt-6">
+          <Link
+            to="/"
+            className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
+          >
+            Bosh sahifaga
+          </Link>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
+  console.error(error);
+  const router = useRouter();
+
+  return (
+    <div className="flex min-h-screen items-center justify-center bg-background px-4">
+      <div className="max-w-md text-center">
+        <h1 className="text-xl font-semibold tracking-tight text-foreground">
+          Sahifa yuklanmadi
+        </h1>
+        <p className="mt-2 text-sm text-muted-foreground">
+          Nimadir noto'g'ri ketdi. Sahifani yangilang yoki bosh sahifaga
+          qayting.
+        </p>
+        <div className="mt-6 flex flex-wrap justify-center gap-2">
+          <button
+            onClick={() => {
+              router.invalidate();
+              reset();
+            }}
+            className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
+          >
+            Qayta urinish
+          </button>
+          <a
+            href="/"
+            className="inline-flex items-center justify-center rounded-md border border-input bg-background px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-accent"
+          >
+            Bosh sahifaga
+          </a>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
+  {
+    head: () => ({
+      meta: [
+        { charSet: "utf-8" },
+        { name: "viewport", content: "width=device-width, initial-scale=1" },
+        { title: "Janob Hot-Dog — Toshkentdagi hot-dog kafesi" },
+        {
+          name: "description",
+          content:
+            "Janob Hot-Dog — Toshkentdagi hot-dog kafesi. Jonli olovda pishirilgan hot-doglarni onlayn buyurtma qiling: yetkazib berish yoki olib ketish.",
+        },
+        {
+          property: "og:title",
+          content: "Janob Hot-Dog — Toshkentdagi hot-dog kafesi",
+        },
+        {
+          property: "og:description",
+          content:
+            "Jonli olovda pishirilgan hot-doglar, lavash dog va kartoshka fri. Onlayn buyurtma bering.",
+        },
+        { property: "og:type", content: "website" },
+        { name: "twitter:card", content: "summary_large_image" },
+      ],
+      links: [
+        {
+          rel: "stylesheet",
+          href: appCss,
+        },
+        { rel: "preconnect", href: "https://fonts.googleapis.com" },
+        {
+          rel: "preconnect",
+          href: "https://fonts.gstatic.com",
+          crossOrigin: "anonymous",
+        },
+        {
+          rel: "stylesheet",
+          href: "https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Figtree:wght@400;500;600&display=swap",
+        },
+        { rel: "icon", href: "/favicon.ico", type: "image/x-icon" },
+      ],
+    }),
+
+    shellComponent: RootShell,
+    component: RootComponent,
+    notFoundComponent: NotFoundComponent,
+    errorComponent: ErrorComponent,
+  },
+);
+
+function RootShell({ children }: { children: ReactNode }) {
+  return (
+    <html lang="uz">
+      <head>
+        <HeadContent />
+      </head>
+      <body>
+        {children}
+        <Scripts />
+      </body>
+    </html>
+  );
+}
+
+function RootComponent() {
+  const { queryClient } = Route.useRouteContext();
+
+  return (
+    <QueryClientProvider client={queryClient}>
+      <CartProvider>
+        <SiteHeader />
+        <main className="min-h-screen">
+          {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
+          <Outlet />
+        </main>
+        <SiteFooter />
+        <MobileNav />
+        <CartSheet />
+        <Toaster position="top-center" />
+      </CartProvider>
+    </QueryClientProvider>
+  );
+}
