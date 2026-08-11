@@ -1,15 +1,7 @@
 import { useEffect, useState } from "react";
-import {
-  MessageCircle,
-  Minus,
-  Plus,
-  ShoppingBag,
-  Trash2,
-  X,
-} from "lucide-react";
+import { Minus, Plus, ShoppingBag, Trash2, X } from "lucide-react";
 import { toast } from "sonner";
 import { useCart } from "@/components/cart-context";
-import { config } from "@/lib/config";
 import { formatSom } from "@/data/menu";
 import { useTelegram } from "@/lib/use-telegram";
 
@@ -76,23 +68,6 @@ export function CartSheet() {
     setPhone("");
     setFormOpen(false);
     setOpen(false);
-  };
-
-  const startConnect = () => {
-    // Code yaratamiz — bot shu code bilan tugma yuboradi, ulanish serverda
-    // saqlanadi va saytga oddiy kirganda ham brauzer oladi.
-    let code = localStorage.getItem("janob_tg_code");
-    if (!code) {
-      const arr = new Uint8Array(8);
-      crypto.getRandomValues(arr);
-      code = Array.from(arr, (b) => b.toString(16).padStart(2, "0")).join("");
-      localStorage.setItem("janob_tg_code", code);
-    }
-    window.open(
-      `https://t.me/${config.telegramBot}?start=connect_${code}`,
-      "_blank",
-      "noopener",
-    );
   };
 
   const modeLabel = {
@@ -181,49 +156,6 @@ export function CartSheet() {
                   </div>
                 ))}
               </div>
-
-              <div className="space-y-4 border-t border-border pt-5">
-                <div className="glass grid grid-cols-2 gap-1 rounded-full p-1">
-                  {(["delivery", "pickup"] as const).map((m) => (
-                    <button
-                      key={m}
-                      onClick={() => setMode(m)}
-                      className={`rounded-full py-2 text-sm font-medium transition-all ${
-                        mode === m
-                          ? "bg-ember-gradient text-primary-foreground"
-                          : "text-muted-foreground hover:text-foreground"
-                      }`}
-                    >
-                      {modeLabel[m]}
-                    </button>
-                  ))}
-                </div>
-                <div className="flex items-center gap-3 rounded-2xl bg-amber-950/10 px-4 py-3">
-                  <div className="flex min-w-0 flex-1 items-center gap-2.5">
-                    <MessageCircle className="size-5 shrink-0 text-primary" />
-                    <div className="min-w-0">
-                      <p
-                        className={`text-sm font-medium ${tg ? "text-emerald-400" : "text-muted-foreground"}`}
-                      >
-                        {tg ? `@${tg.username ?? tg.first_name}` : "Telegram"}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        {tg
-                          ? "Buyurtma holati xabarnomalari"
-                          : "Buyurtma holati haqida xabardor bo'ling"}
-                      </p>
-                    </div>
-                  </div>
-                  {tg ? null : config.telegramBot !== "YOUR_BOT_USERNAME" ? (
-                    <button
-                      onClick={startConnect}
-                      className="bg-ember-gradient shrink-0 rounded-full px-3.5 py-1.5 text-xs font-semibold text-primary-foreground"
-                    >
-                      Telegramga ulanish
-                    </button>
-                  ) : null}
-                </div>
-              </div>
             </div>
 
             <div className="space-y-4 border-t border-border px-6 pt-4 pb-24 md:pb-5">
@@ -235,6 +167,21 @@ export function CartSheet() {
               </div>
               {formOpen ? (
                 <div className="space-y-3">
+                  <div className="glass grid grid-cols-2 gap-1 rounded-full p-1">
+                    {(["delivery", "pickup"] as const).map((m) => (
+                      <button
+                        key={m}
+                        onClick={() => setMode(m)}
+                        className={`rounded-full py-2 text-sm font-medium transition-all ${
+                          mode === m
+                            ? "bg-ember-gradient text-primary-foreground"
+                            : "text-muted-foreground hover:text-foreground"
+                        }`}
+                      >
+                        {modeLabel[m]}
+                      </button>
+                    ))}
+                  </div>
                   <input
                     value={name}
                     onChange={(e) => setName(e.target.value)}
