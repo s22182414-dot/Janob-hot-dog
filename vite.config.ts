@@ -7,12 +7,23 @@ import { nitro } from "nitro/vite";
 
 export default defineConfig({
   plugins: [
+    nitro({
+      handlers: [
+        {
+          route: "/api/telegram/webhook",
+          handler: "./server/routes/api/telegram/webhook.ts",
+        },
+        {
+          route: "/api/telegram/link",
+          handler: "./server/routes/api/telegram/link.ts",
+        },
+      ],
+    }),
     tanstackStart({
       server: { entry: "server" },
     }),
     react(),
     tailwindcss(),
     tsConfigPaths(),
-    nitro(),
   ],
 });

@@ -1,6 +1,7 @@
 import { config } from "@/lib/config";
-import { Check, Loader, Send, X } from "lucide-react";
-import { useCallback, useEffect, useId, useState } from "react";
+import { Loader, Send, X } from "lucide-react";
+import { useEffect, useState } from "react";
+import { toast } from "sonner";
 
 type TelegramUser = {
   id: number;
@@ -12,67 +13,92 @@ type TelegramUser = {
   hash: string;
 };
 
-declare global {
-  interface Window {
-    onTelegramAuth: ((user: TelegramUser) => void) | null;
-  }
+const STORAGE_KEY = "janob_telegram";
+const PENDING_KEY = "janob_tg_pending";
+
+function randomToken(): string {
+  const arr = new Uint8Array(8);
+  crypto.getRandomValues(arr);
+  return Array.from(arr, (b) => b.toString(16).padStart(2, "0")).join("");
 }
 
-const STORAGE_KEY = "janob_telegram";
-
 export function TelegramConnect() {
-  const id = useId();
   const [user, setUser] = useState<TelegramUser | null>(null);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
-      if (raw) setUser(JSON.parse(raw));
+      if (raw) setUser(JSON.parse(raw) as TelegramUser);
     } catch {
       /* ignore */
     }
   }, []);
 
-  const handleAuth = useCallback((tgUser: TelegramUser) => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(tgUser));
-    setUser(tgUser);
-    setLoading(false);
+  // Bot tugmasi bosilgach sayt /profil?tg=<token> da ochiladi — shu yerda ulanamiz.
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const token = params.get("tg");
+    if (!token) return;
+
+    const pending = localStorage.getItem(PENDING_KEY);
+    const done = () => {
+      localStorage.removeItem(PENDING_KEY);
+      window.history.replaceState({}, "", window.location.pathname);
+    };
+
+    if (pending !== token) {
+      // Token biznikiga to'g'ri kelmadi — faqat URL'ni tozalaymiz.
+      done();
+      return;
+    }
+
+    setLoading(true);
+    (async () => {
+      try {
+        const res = await fetch(
+          `/api/telegram/link?token=${encodeURIComponent(token)}`,
+        );
+        const data = (await res.json()) as {
+          ok?: boolean;
+          user?: TelegramUser;
+        };
+        if (data?.ok && data.user) {
+          const tgUser: TelegramUser = {
+            ...data.user,
+            auth_date: Math.floor(Date.now() / 1000),
+            hash: "",
+          };
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(tgUser));
+          setUser(tgUser);
+          toast.success("Telegram akkount ulandi! ✅");
+        } else {
+          toast.error("Ulanish amalga oshmadi. Qaytadan urinib ko'ring.");
+        }
+      } catch {
+        toast.error("Ulanish amalga oshmadi. Qaytadan urinib ko'ring.");
+      } finally {
+        setLoading(false);
+        done();
+      }
+    })();
   }, []);
 
-  useEffect(() => {
-    window.onTelegramAuth = handleAuth;
-    return () => {
-      window.onTelegramAuth = null;
-    };
-  }, [handleAuth]);
-
-  const loadWidget = useCallback(() => {
-    if (loading) return;
-    setLoading(true);
-
-    // remove old widget scripts & containers
-    document
-      .querySelectorAll(`[data-tg-widget="${id}"]`)
-      .forEach((el) => el.remove());
-
-    const container = document.getElementById(`tg-container-${id}`);
-    if (!container) return;
-
-    const script = document.createElement("script");
-    script.src = "https://telegram.org/js/telegram-widget.js?22";
-    script.setAttribute("data-telegram-login", config.telegramBot);
-    script.setAttribute("data-size", "large");
-    script.setAttribute("data-radius", "14");
-    script.setAttribute("data-onauth", "onTelegramAuth(user)");
-    script.setAttribute("data-request-access", "write");
-    script.setAttribute("data-tg-widget", id);
-    container.appendChild(script);
-  }, [id, loading]);
+  const startConnect = () => {
+    const token = randomToken();
+    localStorage.setItem(PENDING_KEY, token);
+    // Foydalanuvchini botga yo'naltiramiz — bot tugma yuboradi.
+    window.open(
+      `https://t.me/${config.telegramBot}?start=connect_${token}`,
+      "_blank",
+      "noopener",
+    );
+  };
 
   const disconnect = () => {
     localStorage.removeItem(STORAGE_KEY);
     setUser(null);
+    toast.success("Telegram akkount uzildi");
   };
 
   return (
@@ -98,13 +124,8 @@ export function TelegramConnect() {
         </button>
       ) : (
         <div className="mt-4">
-          <div
-            id={`tg-container-${id}`}
-            className="flex justify-center [&_iframe]:!mx-auto [&_iframe]:!overflow-hidden"
-          />
-
           {config.telegramBot === "YOUR_BOT_USERNAME" ? (
-            <div className="mt-3 rounded-xl border border-dashed border-amber-600/40 bg-amber-950/20 px-4 py-3 text-center text-xs text-amber-400">
+            <div className="rounded-xl border border-dashed border-amber-600/40 bg-amber-950/20 px-4 py-3 text-center text-xs text-amber-400">
               @BotFather orqali bot yarating va{" "}
               <code className="rounded bg-black/30 px-1.5 py-0.5 font-mono text-amber-300">
                 VITE_TG_BOT
@@ -113,7 +134,7 @@ export function TelegramConnect() {
             </div>
           ) : (
             <button
-              onClick={loadWidget}
+              onClick={startConnect}
               disabled={loading}
               className="bg-ember-gradient flex w-full items-center justify-center gap-2 rounded-xl py-3 text-sm font-semibold text-primary-foreground transition-opacity disabled:opacity-60"
             >
@@ -122,9 +143,16 @@ export function TelegramConnect() {
               ) : (
                 <Send className="size-4" />
               )}
-              {loading ? "Yuklanmoqda..." : "Telegramga ulanish"}
+              {loading ? "Ulanmoqda..." : "Telegramga ulanish"}
             </button>
           )}
+          <p className="mt-3 text-center text-xs text-muted-foreground">
+            Tugmani bosganingizda bot ochiladi — botdagi{" "}
+            <span className="font-medium text-foreground">
+              "Akkountni ulash"
+            </span>{" "}
+            tugmasini bosing va akkount ulanadi.
+          </p>
         </div>
       )}
     </div>
