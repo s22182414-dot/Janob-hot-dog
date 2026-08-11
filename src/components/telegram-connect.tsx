@@ -13,11 +13,20 @@ type TelegramUser = {
   hash: string;
 };
 
+type TgUnsafeUser = {
+  id: number;
+  first_name?: string;
+  last_name?: string;
+  username?: string;
+  photo_url?: string;
+};
+
 declare global {
   interface Window {
     Telegram?: {
       WebApp: {
         initData: string;
+        initDataUnsafe?: { user?: TgUnsafeUser };
         ready: () => void;
         close: () => void;
       };
@@ -26,6 +35,21 @@ declare global {
 }
 
 const STORAGE_KEY = "janob_telegram";
+
+function parseInitDataUnsafeUser(
+  u: TgUnsafeUser | undefined,
+): TelegramUser | null {
+  if (!u?.id) return null;
+  return {
+    id: u.id,
+    first_name: u.first_name ?? "",
+    ...(u.last_name ? { last_name: u.last_name } : {}),
+    ...(u.username ? { username: u.username } : {}),
+    ...(u.photo_url ? { photo_url: u.photo_url } : {}),
+    auth_date: Math.floor(Date.now() / 1000),
+    hash: "",
+  };
+}
 
 function parseInitDataUser(initData: string): TelegramUser | null {
   try {
@@ -65,14 +89,32 @@ export function TelegramConnect() {
   // Telegram Mini App ichida ochilganda initData orqali avtomatik ulanamiz —
   // foydalanuvchi hech qayerga o'tib ketmaydi, hammasi Telegram ichida bo'ladi.
   useEffect(() => {
-    const webApp = window.Telegram?.WebApp;
-    if (!webApp || !webApp.initData) return;
-    webApp.ready();
-    const tgUser = parseInitDataUser(webApp.initData);
-    if (tgUser) {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(tgUser));
-      setUser(tgUser);
-      toast.success("Telegram akkount ulandi! ✅");
+    const tryConnect = () => {
+      const webApp = window.Telegram?.WebApp;
+      if (!webApp) return false;
+      webApp.ready();
+      const tgUser =
+        parseInitDataUser(webApp.initData) ??
+        parseInitDataUnsafeUser(webApp.initDataUnsafe?.user);
+      if (tgUser) {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(tgUser));
+        setUser(tgUser);
+        toast.success("Telegram akkount ulandi! ✅");
+        return true;
+      }
+      return false;
+    };
+
+    if (tryConnect()) return;
+
+    // Telegram SDK hali mavjud bo'lmasa (ba'zi qurilmalarda kechikadi) —
+    // rasmiy SDK'ni o'zimiz yuklaymiz va ulanishni qayta urinamiz.
+    if (!window.Telegram) {
+      const script = document.createElement("script");
+      script.src = "https://telegram.org/js/telegram-web-app.js";
+      script.async = true;
+      script.onload = tryConnect;
+      document.head.appendChild(script);
     }
   }, []);
 
