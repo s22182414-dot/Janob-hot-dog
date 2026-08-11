@@ -23,26 +23,27 @@ export function CartSheet() {
 
   if (!open) return null;
 
-  const placeOrder = () => {
+  const placeOrder = async () => {
     if (!name.trim() || !phone.trim()) {
       toast.error("Iltimos, ismingiz va telefon raqamingizni kiriting");
       return;
     }
+    const order = {
+      id: Date.now().toString(36),
+      name: name.trim(),
+      phone: phone.trim(),
+      mode,
+      lines: lines.map((l) => ({
+        name: l.item.name,
+        qty: l.qty,
+        price: l.item.price,
+      })),
+      total,
+      createdAt: Date.now(),
+      tg: tg?.username ?? tg?.first_name,
+    };
+    // Lokal saqlash — mijozning o'z tarixi uchun
     try {
-      const order = {
-        id: Date.now().toString(36),
-        name: name.trim(),
-        phone: phone.trim(),
-        mode,
-        lines: lines.map((l) => ({
-          name: l.item.name,
-          qty: l.qty,
-          price: l.item.price,
-        })),
-        total,
-        createdAt: Date.now(),
-        tg: tg?.username ?? tg?.first_name,
-      };
       const existing = JSON.parse(localStorage.getItem("janob_orders") ?? "[]");
       localStorage.setItem(
         "janob_orders",
@@ -50,6 +51,16 @@ export function CartSheet() {
       );
     } catch {
       /* ignore */
+    }
+    // Serverga yuboramiz — admin panel istalgan qurilmada ko'ra oladi
+    try {
+      await fetch("/api/orders", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(order),
+      });
+    } catch {
+      /* server bo'lmasa ham buyurtma lokal saqlanadi */
     }
     toast.success(`Rahmat, ${name}! Buyurtmangiz qabul qilindi.`, {
       description: `${count} ta mahsulot · ${formatSom(total)} · ${mode === "delivery" ? "Yetkazib berish ~30 daqiqa" : "Olib ketish ~15 daqiqada tayyor"}${tg ? ` · Telegram: @${tg.username ?? tg.first_name}` : ""}`,

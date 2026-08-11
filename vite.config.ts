@@ -17,6 +17,10 @@ export default defineConfig({
           route: "/api/telegram/connect",
           handler: "./server/routes/api/telegram/connect.ts",
         },
+        {
+          route: "/api/orders",
+          handler: "./server/routes/api/orders.ts",
+        },
       ],
     }),
     tanstackStart({

@@ -6,10 +6,11 @@ import {
   Lock,
   Phone,
   ReceiptText,
+  RefreshCw,
   ShoppingBag,
   UtensilsCrossed,
 } from "lucide-react";
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { MenuManager } from "@/components/menu-manager";
 import { config } from "@/lib/config";
 import { formatSom } from "@/data/menu";
@@ -52,6 +53,13 @@ function loadOrders(): SavedOrder[] {
   return [];
 }
 
+function mergeOrders(server: SavedOrder[], local: SavedOrder[]): SavedOrder[] {
+  const byId = new Map<string, SavedOrder>();
+  for (const o of server) byId.set(o.id, o);
+  for (const o of local) if (!byId.has(o.id)) byId.set(o.id, o);
+  return Array.from(byId.values()).sort((a, b) => b.createdAt - a.createdAt);
+}
+
 function AdminPage() {
   const [authed, setAuthed] = useState(
     () =>
@@ -75,6 +83,36 @@ function AdminPage() {
       setError(true);
     }
   };
+
+  // Serverdagi buyurtmalarni o'qiymiz — istalgan qurilmadan berilgan
+  // buyurtmalar ham admin panelda ko'rinadi.
+  const refreshOrders = useCallback(async () => {
+    try {
+      const res = await fetch("/api/orders");
+      const data = (await res.json()) as {
+        ok?: boolean;
+        orders?: SavedOrder[];
+      };
+      if (data?.ok && Array.isArray(data.orders)) {
+        setOrders(mergeOrders(data.orders, loadOrders()));
+      }
+    } catch {
+      /* server bo'lmasa lokal buyurtmalar qoladi */
+    }
+  }, []);
+
+  // Yangilanadi: sahifa ochilganda, oynaga qaytganda va har 15 soniyada.
+  useEffect(() => {
+    if (!authed) return;
+    refreshOrders();
+    const id = setInterval(refreshOrders, 15000);
+    const onFocus = () => refreshOrders();
+    window.addEventListener("focus", onFocus);
+    return () => {
+      clearInterval(id);
+      window.removeEventListener("focus", onFocus);
+    };
+  }, [authed, refreshOrders]);
 
   if (!authed) {
     return (
@@ -195,9 +233,17 @@ function AdminPage() {
             </div>
 
             <div className="glass mt-6 rounded-3xl p-6">
-              <h2 className="font-display flex items-center gap-2 text-lg font-semibold">
-                <ReceiptText className="size-5 text-primary" /> Buyurtmalar
-              </h2>
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <h2 className="font-display flex items-center gap-2 text-lg font-semibold">
+                  <ReceiptText className="size-5 text-primary" /> Buyurtmalar
+                </h2>
+                <button
+                  onClick={() => refreshOrders()}
+                  className="glass flex items-center gap-2 rounded-full px-4 py-1.5 text-xs font-medium transition-colors hover:bg-primary hover:text-primary-foreground"
+                >
+                  <RefreshCw className="size-3.5" /> Yangilash
+                </button>
+              </div>
               {orders.length === 0 ? (
                 <p className="py-10 text-center text-sm text-muted-foreground">
                   Hali buyurtmalar yo'q
