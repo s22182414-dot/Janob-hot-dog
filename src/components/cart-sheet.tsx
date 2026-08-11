@@ -78,10 +78,10 @@ export function CartContent({ onClose }: { onClose: () => void }) {
 
   return (
     <>
-      <div className="flex shrink-0 items-center justify-between border-b border-border px-6 py-5">
+      <div className="flex shrink-0 items-center justify-between border-b border-border px-6 py-3">
         <div className="flex min-w-0 items-center gap-2">
           <button
-            onClick={onClose}
+            onClick={() => (formOpen ? setFormOpen(false) : onClose())}
             aria-label="Ortga"
             className="glass flex size-9 shrink-0 items-center justify-center rounded-full sm:hidden"
           >
