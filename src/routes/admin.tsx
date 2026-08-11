@@ -3,7 +3,6 @@ import {
   ArrowLeft,
   BarChart3,
   Clock,
-  CreditCard,
   Lock,
   MapPin,
   Phone,
@@ -37,7 +36,6 @@ type SavedOrder = {
   name: string;
   phone: string;
   mode: "delivery" | "pickup";
-  payment?: "cash" | "card";
   address?: string;
   lines: { name: string; qty: number; price: number }[];
   total: number;
@@ -200,10 +198,6 @@ function AdminPage() {
     delivery: "Yetkazib berish",
     pickup: "Olib ketish",
   } as const;
-  const paymentLabel = {
-    cash: "Naqd pul",
-    card: "Karta",
-  } as const;
 
   return (
     <section className="relative px-4 pt-16 pb-28 sm:px-6 md:pt-40">
@@ -314,12 +308,6 @@ function AdminPage() {
                         {o.address ? (
                           <p className="mt-1 flex flex-wrap items-center gap-x-2 text-xs text-muted-foreground">
                             <MapPin className="size-3" /> {o.address}
-                          </p>
-                        ) : null}
-                        {o.payment ? (
-                          <p className="mt-1 flex flex-wrap items-center gap-x-2 text-xs text-muted-foreground">
-                            <CreditCard className="size-3" />{" "}
-                            {paymentLabel[o.payment]}
                           </p>
                         ) : null}
                         <ul className="mt-1 text-xs text-muted-foreground">

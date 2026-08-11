@@ -11,7 +11,6 @@ export function CartSheet() {
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [mode, setMode] = useState<"delivery" | "pickup">("delivery");
-  const [payment, setPayment] = useState<"cash" | "card">("cash");
   const [address, setAddress] = useState("");
   const [formOpen, setFormOpen] = useState(false);
   const { tg } = useTelegram();
@@ -37,7 +36,6 @@ export function CartSheet() {
       name: name.trim(),
       phone: phone.trim(),
       mode,
-      payment,
       ...(mode === "delivery" ? { address: address.trim() } : {}),
       lines: lines.map((l) => ({
         name: l.item.name,
@@ -75,7 +73,6 @@ export function CartSheet() {
     setName("");
     setPhone("");
     setAddress("");
-    setPayment("cash");
     setFormOpen(false);
     setOpen(false);
   };
@@ -83,11 +80,6 @@ export function CartSheet() {
   const modeLabel = {
     delivery: "Yetkazib berish",
     pickup: "Olib ketish",
-  } as const;
-
-  const paymentLabel = {
-    cash: "Naqd pul",
-    card: "Karta",
   } as const;
 
   return (
@@ -156,29 +148,12 @@ export function CartSheet() {
               className="glass w-full rounded-2xl px-4 py-3 text-sm outline-none placeholder:text-muted-foreground focus:border-primary"
             />
             {mode === "delivery" && (
-              <>
-                <div className="glass grid grid-cols-2 gap-1 rounded-full p-1">
-                  {(["cash", "card"] as const).map((p) => (
-                    <button
-                      key={p}
-                      onClick={() => setPayment(p)}
-                      className={`rounded-full py-2 text-sm font-medium transition-all ${
-                        payment === p
-                          ? "bg-ember-gradient text-primary-foreground"
-                          : "text-muted-foreground hover:text-foreground"
-                      }`}
-                    >
-                      {paymentLabel[p]}
-                    </button>
-                  ))}
-                </div>
-                <input
-                  value={address}
-                  onChange={(e) => setAddress(e.target.value)}
-                  placeholder="Manzilingiz (masalan: Chilonzor 20, 12-uy)"
-                  className="glass w-full rounded-2xl px-4 py-3 text-sm outline-none placeholder:text-muted-foreground focus:border-primary"
-                />
-              </>
+              <input
+                value={address}
+                onChange={(e) => setAddress(e.target.value)}
+                placeholder="Manzilingiz (masalan: Chilonzor 20, 12-uy)"
+                className="glass w-full rounded-2xl px-4 py-3 text-sm outline-none placeholder:text-muted-foreground focus:border-primary"
+              />
             )}
             <button
               onClick={placeOrder}

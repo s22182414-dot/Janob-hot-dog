@@ -8,11 +8,6 @@ const modeLabel = {
   pickup: "Olib ketish",
 } as const;
 
-const paymentLabel = {
-  cash: "Naqd pul",
-  card: "Karta",
-} as const;
-
 /**
  * Yangi buyurtma haqida egasining Telegram chatiga xabar yuboradi.
  * OWNER_CHAT_ID o'rnatilmagan bo'lsa, hech narsa qilmaydi.
@@ -33,7 +28,6 @@ export async function notifyOrder(order: SavedOrder) {
     `👤 <b>${order.name}</b>${order.tg ? ` (@${order.tg})` : ""}`,
     `📞 ${order.phone}`,
     `🚚 ${modeLabel[order.mode]}`,
-    ...(order.payment ? [`💳 To'lov: ${paymentLabel[order.payment]}`] : []),
     ...(order.address ? [`📍 ${order.address}`] : []),
     "",
     lines,
