@@ -160,7 +160,7 @@ export async function notifyOrderReady(orderId: string) {
     const userText =
       order.mode === "delivery"
         ? `✅ <b>Ovqatingiz tayyor!</b>\n\nTez orada yetkazib beramiz. 🚚`
-        : `✅ <b>Ovqatingiz tayyor!</b>\n\nOlib ketishingiz mumkin. 😋`;
+        : `✅ <b>Sizning buyurtmangiz tayyor!</b>\n\nOlib ketishingiz mumkin. 😋`;
     await sendMessage(order.tgId, userText);
   }
 }
