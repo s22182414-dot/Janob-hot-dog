@@ -40,6 +40,28 @@ if (data.ok) {
   process.exit(1);
 }
 
-// Bot menyusi (buyruqlar tugmasi) ishlatilmaydi — maxsus tugmalar (web_app)
-// orqali ishlaydi, shuning uchun menyu qo'shilmaydi.
-// Menyuni tozalash uchun: setMyCommands { commands: [] }.
+// Bot chatidagi yozish maydoni yonidagi "Open" tugmasi — Mini App
+// (menu button): bosh sahifani ochadigan web_app tugmasi o'rnatiladi.
+// (BotFather'da ham sozlash mumkin: /mybots -> Bot Settings -> Configure Mini App)
+const siteRoot = url.replace(/\/$/, "");
+const menuRes = await fetch(
+  `https://api.telegram.org/bot${token}/setChatMenuButton`,
+  {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({
+      menu_button: {
+        type: "web_app",
+        text: "🌭 Menyu",
+        web_app: { url: siteRoot },
+      },
+    }),
+  },
+);
+const menuData = await menuRes.json();
+
+if (menuData.ok) {
+  console.log("✅ Mini App tugmasi o'rnatildi: 🌭 Menyu (bosh sahifa)");
+} else {
+  console.error("❌ setChatMenuButton xatoligi:", menuData.description ?? menuData);
+}
