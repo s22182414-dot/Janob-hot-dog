@@ -1,6 +1,12 @@
 import { defineEventHandler, readBody } from "h3";
+import {
+  answerCallbackQuery,
+  editMessageText,
+  notifyOrderDelivered,
+  notifyOrderReady,
+  sendMessage,
+} from "../../../lib/telegram-notify";
 
-const BOT_TOKEN = process.env["TELEGRAM_BOT_TOKEN"] ?? "";
 const SITE_URL = process.env["SITE_URL"] ?? "";
 const OWNER_CHAT_ID = process.env["OWNER_CHAT_ID"] ?? "";
 
@@ -14,71 +20,70 @@ type TelegramUpdate = {
       username?: string;
     };
   };
+  callback_query?: {
+    id: string;
+    from?: { id?: number };
+    data?: string;
+    message?: {
+      chat: { id: number };
+      message_id: number;
+      text?: string;
+    };
+  };
 };
-
-type InlineButton = {
-  text: string;
-  url?: string;
-  web_app?: { url: string };
-};
-
-type ReplyMarkup = {
-  inline_keyboard: InlineButton[][];
-};
-
-async function sendMessage(
-  chatId: number,
-  text: string,
-  replyMarkup?: ReplyMarkup,
-) {
-  if (!BOT_TOKEN) {
-    console.error(
-      "Telegram xabari yuborilmadi: TELEGRAM_BOT_TOKEN o'rnatilmagan.",
-    );
-    return;
-  }
-  try {
-    const res = await fetch(
-      `https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`,
-      {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({
-          chat_id: chatId,
-          text,
-          ...(replyMarkup ? { reply_markup: replyMarkup } : {}),
-        }),
-      },
-    );
-    if (!res.ok) {
-      console.error("Telegram sendMessage xatosi:", await res.text());
-    }
-  } catch (error) {
-    console.error("Telegram sendMessage uzilish:", error);
-  }
-}
 
 /**
  * Telegram webhook.
  *
- * /start connect_<code> — website'dan boshlangan oqim: "🔗 Akkountni ulash"
- * tugmasi (web_app) yuboriladi — Telegram ichida Mini App (profil sahifasi)
- * ochiladi, foydalanuvchi hech qayerga o'tib ketmaydi.
- * /start (oddiy) — tugma/link berilmaydi, faqat saytga yo'naltiruvchi matn.
- * /admin — faqat egaga (OWNER_CHAT_ID) admin panelni Mini App sifatida
- * ochadigan tugma yuboriladi.
+ * - /start connect_<code> — website'dan boshlangan oqim: "🔗 Akkountni ulash"
+ *   tugmasi (web_app) yuboriladi — Telegram ichida Mini App (profil sahifasi)
+ *   ochiladi, foydalanuvchi hech qayerga o'tib ketmaydi.
+ * - /start (oddiy) — tugma/link berilmaydi, faqat saytga yo'naltiruvchi matn.
+ * - /admin — faqat egaga (OWNER_CHAT_ID) admin panelni Mini App sifatida
+ *   ochadigan tugma yuboriladi.
+ * - callback_query order_ready:<id> / order_delivered:<id> — oshpazlar va
+ *   yetkazib beruvchilar kanalidagi tugmalar: buyurtma keyingi bosqichga
+ *   o'tadi va foydalanuvchiga bildirishnoma boradi.
  */
 export default defineEventHandler(async (event) => {
   try {
     const body = await readBody<TelegramUpdate>(event);
+
+    // ── Tugma bosildi (callback_query) ────────────────────────────────
+    const callback = body?.callback_query;
+    if (callback?.data && callback.message) {
+      await answerCallbackQuery(callback.id);
+      const match = callback.data.match(/^(order_ready|order_delivered):(.+)$/);
+      if (match) {
+        const action = match[1] ?? "";
+        const orderId = match[2] ?? "";
+        const baseText = callback.message.text ?? "";
+        if (action === "order_ready") {
+          await notifyOrderReady(orderId);
+          await editMessageText(
+            callback.message.chat.id,
+            callback.message.message_id,
+            `${baseText}\n\n✅ Tayyor qilindi`,
+          );
+        } else {
+          await notifyOrderDelivered(orderId);
+          await editMessageText(
+            callback.message.chat.id,
+            callback.message.message_id,
+            `${baseText}\n\n🚚 Yetkazildi`,
+          );
+        }
+      }
+      return { ok: true };
+    }
+
+    // ── Matnli xabar (buyruq) ─────────────────────────────────────────
     const text = body?.message?.text ?? "";
     const chatId = body?.message?.chat?.id;
-
     if (!chatId) return { ok: true };
 
     const from = body.message?.from;
-    const name = from?.first_name ?? from?.username ?? "mehmon"; // /start yoki /start connect_<code> — code bo'lsa web_app URL'iga qo'shamiz,
-    // shunda Mini App ulangach brauzer ham ulanishni ola oladi.
+    const name = from?.first_name ?? from?.username ?? "mehmon";
     const trimmed = text.trim();
     const startMatch = trimmed.match(/^\/start(?:\s+connect_([A-Za-z0-9]+))?$/);
 

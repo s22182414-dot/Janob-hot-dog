@@ -11,6 +11,9 @@ export type SavedOrder = {
   total: number;
   createdAt: number;
   tg?: string;
+  /** Telegram user ID — foydalanuvchiga bildirishnoma yuborish uchun */
+  tgId?: number;
+  status?: "new" | "ready" | "delivered";
 };
 
 const KV_URL = process.env["KV_REST_API_URL"] ?? "";
@@ -87,5 +90,23 @@ export async function addOrder(order: SavedOrder): Promise<void> {
   const orders = await readOrders();
   if (orders.some((o) => o.id === order.id)) return; // takroriy yuborishdan saqlaymiz
   orders.push(order);
+  await writeOrders(orders);
+}
+
+export async function getOrderById(
+  id: string,
+): Promise<SavedOrder | undefined> {
+  const orders = await readOrders();
+  return orders.find((o) => o.id === id);
+}
+
+export async function updateOrderStatus(
+  id: string,
+  status: NonNullable<SavedOrder["status"]>,
+): Promise<void> {
+  const orders = await readOrders();
+  const order = orders.find((o) => o.id === id);
+  if (!order) return;
+  order.status = status;
   await writeOrders(orders);
 }

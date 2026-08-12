@@ -61,6 +61,7 @@ export function CartContent({ onClose }: { onClose: () => void }) {
       total,
       createdAt: Date.now(),
       tg: tg?.username ?? tg?.first_name,
+      tgId: tg?.id,
     };
     // Lokal saqlash — mijozning o'z tarixi uchun
     try {

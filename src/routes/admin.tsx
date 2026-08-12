@@ -41,7 +41,15 @@ type SavedOrder = {
   total: number;
   createdAt: number;
   tg?: string;
+  tgId?: number;
+  status?: "new" | "ready" | "delivered";
 };
+
+const statusLabel = {
+  new: "🆕 Yangi",
+  ready: "✅ Tayyor",
+  delivered: "🚚 Yetkazildi",
+} as const;
 
 const ORDERS_KEY = "janob_orders";
 const AUTH_KEY = "janob_admin_auth";
@@ -296,6 +304,11 @@ function AdminPage() {
                           {o.name}
                           {o.tg ? (
                             <span className="text-primary"> · @{o.tg}</span>
+                          ) : null}
+                          {o.status ? (
+                            <span className="ml-2 inline-block rounded-full bg-black/30 px-2 py-0.5 text-[10px] font-medium text-muted-foreground">
+                              {statusLabel[o.status]}
+                            </span>
                           ) : null}
                         </p>
                         <p className="text-sm text-muted-foreground">
