@@ -62,7 +62,9 @@ export default defineEventHandler(async (event) => {
         const tgId = match[3] ? Number(match[3]) : undefined;
         const baseText = callback.message.text ?? "";
         if (action === "order_ready") {
-          await notifyOrderReady(orderId, tgId);
+          // baseText — oshpaz kanalidagi buyurtma matni; ombor (KV)
+          // o'rnatilmagan bo'lsa ham yetkazuvchilarga shu matn yuboriladi.
+          await notifyOrderReady(orderId, tgId, baseText);
           await editMessageText(
             callback.message.chat.id,
             callback.message.message_id,

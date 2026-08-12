@@ -143,10 +143,16 @@ export async function notifyOrder(order: SavedOrder) {
  *    (COURIERS_CHAT_ID) "🚚 Yetkazildi" tugmasi bilan tashlanadi,
  *  - foydalanuvchiga (Telegram ID) "ovqatingiz tayyor" bildirishnomasi,
  *  - buyurtma holati "ready" ga o'tkaziladi.
- * Buyurtma omborda topilmasa ham (KV o'rnatilmagan bo'lsa) callback
- * data'dagi tgId orqali bildirishnoma baribir yuboriladi.
+ *
+ * Buyurtma omborda topilmasa ham (KV o'rnatilmagan bo'lsa) ishlaydi:
+ *  - tgId callback data'dan olinsa foydalanuvchiga xabar baribir boradi,
+ *  - yetkazuvchilarga oshpaz kanalidagi xabar matni (cooksText) yuboriladi.
  */
-export async function notifyOrderReady(orderId: string, tgId?: number) {
+export async function notifyOrderReady(
+  orderId: string,
+  tgId?: number,
+  cooksText?: string,
+) {
   const order = await getOrderById(orderId);
   const notifyTgId = order?.tgId ?? tgId;
 
@@ -154,21 +160,27 @@ export async function notifyOrderReady(orderId: string, tgId?: number) {
     // Buyurtma topildi: takroriy bosilgan bo'lsa qayta xabar yuborilmaydi.
     if (order.status === "ready" || order.status === "delivered") return;
     await updateOrderStatus(orderId, "ready");
-  } else if (!notifyTgId) {
-    return; // Buyurtma ham, tgId ham yo'q — yuboradigan hech narsa yo'q.
   }
 
-  // Yetkazib berish — buyurtma endi yetkazib beruvchilar kanaliga o'tadi.
-  if (order?.mode === "delivery" && COURIERS_CHAT_ID) {
+  // Yetkazib berish ekanligini aniqlaymiz: ombordagi buyurtmadan, topilmasa
+  // oshpaz xabari matnidan ("🚚 Yetkazib berish" qatori borligi bilan).
+  const isDelivery =
+    order?.mode === "delivery" ||
+    (!order && !!cooksText && cooksText.includes("Yetkazib berish"));
+
+  if (isDelivery && COURIERS_CHAT_ID) {
+    const orderText = order
+      ? buildOrderText(order)
+      : (cooksText ?? "").split("\n").slice(1).join("\n").trim();
     await sendMessage(
       Number(COURIERS_CHAT_ID),
-      `🚚 <b>Yetkazish uchun tayyor!</b>\n\n${buildOrderText(order)}`,
+      `🚚 <b>Yetkazish uchun tayyor!</b>\n\n${orderText}`,
       {
         inline_keyboard: [
           [
             {
               text: "🚚 Yetkazildi",
-              callback_data: `order_delivered:${order.id}${notifyTgId ? `:${notifyTgId}` : ""}`,
+              callback_data: `order_delivered:${orderId}${notifyTgId ? `:${notifyTgId}` : ""}`,
             },
           ],
         ],
