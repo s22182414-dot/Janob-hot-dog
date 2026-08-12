@@ -41,7 +41,8 @@ type TelegramUpdate = {
  * - /start connect_<code> — website'dan boshlangan oqim: "🔗 Akkountni ulash"
  *   tugmasi (web_app) yuboriladi — Telegram ichida Mini App (profil sahifasi)
  *   ochiladi, foydalanuvchi hech qayerga o'tib ketmaydi.
- * - /start (oddiy) — tugma/link berilmaydi, faqat saytga yo'naltiruvchi matn.
+ * - /start (oddiy) — xush kelibsiz matni + bosh sahifani ochadigan
+ *   "🌭 Bizning menyu" web_app tugmasi.
  * - /admin — parol so'raladi; to'g'ri bo'lsa admin panelni Mini App sifatida
  *   ochadigan tugma yuboriladi, noto'g'ri bo'lsa "Xato" deydi.
  * - callback_query order_ready:<id> / order_delivered:<id> — oshpazlar va
@@ -135,12 +136,21 @@ export default defineEventHandler(async (event) => {
           ],
         });
       } else {
-        // Oddiy /start — tugma/link berilmaydi, faqat ko'rsatma matni.
+        // Oddiy /start — xush kelibsiz matni + bosh sahifani ochadigan
+        // web_app (Mini App) tugmasi.
         const site = SITE_URL ? SITE_URL.replace(/\/+$/, "") : "";
         const messageText = site
-          ? `Assalomu alaykum, ${name}! 👋\n\n🌭 Janob Hot-Dog botiga xush kelibsiz!\n\nAkkountni ulash uchun saytimizga o'ting va profil sahifasidagi "Telegramdan kirish" tugmasini bosing:\n\n${site}/profil\n\nShundan keyin bot sizga ulanish tugmasini yuboradi.\n\nℹ️ Sizning chat ID: ${chatId}`
+          ? `Assalomu alaykum, ${name}! 👋\n\n🌭 Janob Hot-Dog botiga xush kelibsiz!\n\nEng mazali hot-doglar, gazaklar va ichimliklar — hammasi bizning menyuda. Buyurtma berish uchun quyidagi tugmani bosing, hammasi shu yerda bo'ladi:`
           : `Assalomu alaykum, ${name}! 👋\n\n🌭 Janob Hot-Dog botiga xush kelibsiz!`;
-        await sendMessage(chatId, messageText);
+        if (site) {
+          await sendMessage(chatId, messageText, {
+            inline_keyboard: [
+              [{ text: "🌭 Bizning menyu", web_app: { url: site } }],
+            ],
+          });
+        } else {
+          await sendMessage(chatId, messageText);
+        }
       }
     } else if (/^\/admin(@\S+)?$/.test(trimmed)) {
       // Admin panel — avval parol so'raladi (pendingAdminAuth), to'g'ri
