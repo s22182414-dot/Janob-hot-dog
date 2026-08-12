@@ -103,9 +103,9 @@ export function buildOrderText(order: SavedOrder): string {
  * Yangi buyurtma:
  *  - egasiga (OWNER_CHAT_ID) oddiy xabar,
  *  - oshpazlar kanaliga (COOKS_CHAT_ID) "✅ Tayyor" tugmasi bilan
- *    (yetkazib berish ham, olib ketish ham — bitta kanal),
- *  - yetkazib berish bo'lsa — bir vaqtning o'zida yetkazib beruvchilar
- *    kanaliga (COURIERS_CHAT_ID) "🚚 Yetkazildi" tugmasi bilan.
+ *    (yetkazib berish ham, olib ketish ham — bitta kanal).
+ * Yetkazib berishda buyurtma "✅ Tayyor" bosilgach yetkazib beruvchilar
+ * kanaliga o'tadi (notifyOrderReady).
  */
 export async function notifyOrder(order: SavedOrder) {
   if (OWNER_CHAT_ID) {
@@ -135,33 +135,16 @@ export async function notifyOrder(order: SavedOrder) {
       },
     );
   }
-  if (order.mode === "delivery" && COURIERS_CHAT_ID) {
-    await sendMessage(
-      Number(COURIERS_CHAT_ID),
-      `🚚 <b>Yetkazish uchun buyurtma!</b>\n\n${buildOrderText(order)}`,
-      {
-        inline_keyboard: [
-          [
-            {
-              text: "🚚 Yetkazildi",
-              callback_data: `order_delivered:${order.id}${tgSuffix}`,
-            },
-          ],
-        ],
-      },
-    );
-  }
 }
 
 /**
  * "Tayyor" bosildi:
+ *  - yetkazib berish bo'lsa — buyurtma yetkazib beruvchilar kanaliga
+ *    (COURIERS_CHAT_ID) "🚚 Yetkazildi" tugmasi bilan tashlanadi,
  *  - foydalanuvchiga (Telegram ID) "ovqatingiz tayyor" bildirishnomasi,
  *  - buyurtma holati "ready" ga o'tkaziladi.
- * (Yetkazib beruvchilar kanaliga buyurtma allaqachon yuborilgan.)
- */
-/**
- * "Tayyor" bosildi. Buyurtma omborda topilmasa ham (KV o'rnatilmagan bo'lsa)
- * callback data'dagi tgId orqali foydalanuvchiga bildirishnoma yuboriladi.
+ * Buyurtma omborda topilmasa ham (KV o'rnatilmagan bo'lsa) callback
+ * data'dagi tgId orqali bildirishnoma baribir yuboriladi.
  */
 export async function notifyOrderReady(orderId: string, tgId?: number) {
   const order = await getOrderById(orderId);
@@ -173,6 +156,24 @@ export async function notifyOrderReady(orderId: string, tgId?: number) {
     await updateOrderStatus(orderId, "ready");
   } else if (!notifyTgId) {
     return; // Buyurtma ham, tgId ham yo'q — yuboradigan hech narsa yo'q.
+  }
+
+  // Yetkazib berish — buyurtma endi yetkazib beruvchilar kanaliga o'tadi.
+  if (order?.mode === "delivery" && COURIERS_CHAT_ID) {
+    await sendMessage(
+      Number(COURIERS_CHAT_ID),
+      `🚚 <b>Yetkazish uchun tayyor!</b>\n\n${buildOrderText(order)}`,
+      {
+        inline_keyboard: [
+          [
+            {
+              text: "🚚 Yetkazildi",
+              callback_data: `order_delivered:${order.id}${notifyTgId ? `:${notifyTgId}` : ""}`,
+            },
+          ],
+        ],
+      },
+    );
   }
 
   if (notifyTgId) {
