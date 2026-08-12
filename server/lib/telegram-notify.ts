@@ -77,6 +77,12 @@ export function answerCallbackQuery(callbackQueryId: string) {
   return tgCall("answerCallbackQuery", { callback_query_id: callbackQueryId });
 }
 
+/** Buyurtma raqami — id (base36) dan 4 xonali noyob raqam. */
+export function orderNumber(id: string): string {
+  const n = parseInt(id, 36);
+  return String(((Number.isFinite(n) ? n : 0) % 9000) + 1000);
+}
+
 /** Buyurtma matnini barcha kanallar uchun bitta joyda quramiz. */
 export function buildOrderText(order: SavedOrder): string {
   const lines = order.lines
@@ -87,7 +93,13 @@ export function buildOrderText(order: SavedOrder): string {
     .join("\n");
 
   return [
+    `🎫 <b>Buyurtma #${orderNumber(order.id)}</b>`,
+    "",
     `👤 <b>${order.name}</b>${order.tg ? ` (@${order.tg})` : ""}`,
+    // Usernamesiz akkaunt ham aniq topiladi — profil havolasi (tg://user?id)
+    ...(order.tgId
+      ? [`🔗 <a href="tg://user?id=${order.tgId}">Telegram profili</a>`]
+      : []),
     `📞 ${order.phone}`,
     `🚚 ${modeLabel[order.mode]}`,
     ...(order.address ? [`📍 ${order.address}`] : []),
@@ -192,9 +204,10 @@ export async function notifyOrderReady(
     // Matn rejimga qarab: yetkazib berish — tez orada yetkazamiz,
     // olib ketish — olib ketishingiz mumkin. (Omborda buyurtma yo'q bo'lsa
     // ham oshpaz matnidan rejim aniqlanadi.)
+    const num = orderNumber(orderId);
     const userText = isDelivery
-      ? `✅ <b>Ovqatingiz tayyor!</b>\n\nTez orada yetkazib beramiz. 🚚`
-      : `✅ <b>Sizning buyurtmangiz tayyor!</b>\n\nOlib ketishingiz mumkin. 😋`;
+      ? `🎫 Buyurtma #${num}\n\n✅ <b>Ovqatingiz tayyor!</b>\n\nTez orada yetkazib beramiz. 🚚`
+      : `🎫 Buyurtma #${num}\n\n✅ <b>Sizning buyurtmangiz tayyor!</b>\n\nOlib ketishingiz mumkin. 😋`;
     await sendMessage(notifyTgId, userText);
   }
 }
@@ -217,7 +230,7 @@ export async function notifyOrderDelivered(orderId: string, tgId?: number) {
   if (notifyTgId) {
     await sendMessage(
       notifyTgId,
-      `🚚 <b>Ovqatingiz yetkazildi!</b>\n\nYoqimli ishtaha! 😋`,
+      `🎫 Buyurtma #${orderNumber(orderId)}\n\n🚚 <b>Ovqatingiz yetkazildi!</b>\n\nYoqimli ishtaha! 😋`,
     );
   }
 }

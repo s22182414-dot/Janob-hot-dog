@@ -16,6 +16,7 @@ import { MenuManager } from "@/components/menu-manager";
 import { config } from "@/lib/config";
 import { loadTelegramWebApp } from "@/lib/telegram-webapp";
 import { formatSom } from "@/data/menu";
+import { orderNumber } from "@/lib/order";
 
 export const Route = createFileRoute("/admin")({
   validateSearch: (search: Record<string, unknown>) => ({
@@ -301,6 +302,9 @@ function AdminPage() {
                     >
                       <div className="min-w-0">
                         <p className="font-medium">
+                          <span className="text-primary">
+                            🎫 #{orderNumber(o.id)}
+                          </span>{" "}
                           {o.name}
                           {o.tg ? (
                             <span className="text-primary"> · @{o.tg}</span>

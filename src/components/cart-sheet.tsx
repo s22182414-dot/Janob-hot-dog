@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { useCart } from "@/components/cart-context";
 import { formatSom } from "@/data/menu";
+import { orderNumber } from "@/lib/order";
 import { useTelegram } from "@/lib/use-telegram";
 
 /** Telefon raqamni "+998 xx xxx xx xx" formatida avtomatik joylashtiradi. */
@@ -113,7 +114,7 @@ export function CartContent({ onClose }: { onClose: () => void }) {
       /* server bo'lmasa ham buyurtma lokal saqlanadi */
     }
     toast.success(`Rahmat, ${name}! Buyurtmangiz qabul qilindi.`, {
-      description: `${count} ta mahsulot · ${formatSom(total)} · ${mode === "delivery" ? "Yetkazib berish ~30 daqiqa" : "Olib ketish ~15 daqiqada tayyor"}${tg ? ` · Telegram: @${tg.username ?? tg.first_name}` : ""}`,
+      description: `🎫 Buyurtma #${orderNumber(order.id)} · ${count} ta mahsulot · ${formatSom(total)} · ${mode === "delivery" ? "Yetkazib berish ~30 daqiqa" : "Olib ketish ~15 daqiqada tayyor"}${tg ? ` · Telegram: @${tg.username ?? tg.first_name}` : ""}`,
     });
     clear();
     onClose();
