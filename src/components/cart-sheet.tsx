@@ -20,9 +20,27 @@ export function CartContent({ onClose }: { onClose: () => void }) {
   const [formOpen, setFormOpen] = useState(false);
   const { tg } = useTelegram();
 
+  /** Telefon raqamni "+998 xx xxx xx xx" formatida avtomatik joylashtiradi. */
+  const formatPhone = (raw: string) => {
+    let digits = raw.replace(/\D/g, "");
+    if (digits.startsWith("998")) digits = digits.slice(3);
+    else if (digits.startsWith("8")) digits = digits.slice(1);
+    digits = digits.slice(0, 9);
+    let result = "+998";
+    if (digits.length > 0) result += ` ${digits.slice(0, 2)}`;
+    if (digits.length > 2) result += ` ${digits.slice(2, 5)}`;
+    if (digits.length > 5) result += ` ${digits.slice(5, 7)}`;
+    if (digits.length > 7) result += ` ${digits.slice(7, 9)}`;
+    return result;
+  };
+
   const placeOrder = async () => {
-    if (!name.trim() || !phone.trim()) {
-      toast.error("Iltimos, ismingiz va telefon raqamingizni kiriting");
+    if (!name.trim()) {
+      toast.error("Iltimos, ismingizni kiriting");
+      return;
+    }
+    if (phone.replace(/\D/g, "").length !== 12) {
+      toast.error("Iltimos, telefon raqamingizni to'liq kiriting");
       return;
     }
     if (mode === "delivery" && !address.trim()) {
@@ -139,7 +157,7 @@ export function CartContent({ onClose }: { onClose: () => void }) {
           />
           <input
             value={phone}
-            onChange={(e) => setPhone(e.target.value)}
+            onChange={(e) => setPhone(formatPhone(e.target.value))}
             placeholder="+998 90 123 45 67"
             inputMode="tel"
             className="glass w-full rounded-2xl px-4 py-3 text-sm outline-none placeholder:text-muted-foreground focus:border-primary"
