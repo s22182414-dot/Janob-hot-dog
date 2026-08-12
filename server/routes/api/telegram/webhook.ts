@@ -8,7 +8,10 @@ import {
 } from "../../../lib/telegram-notify";
 
 const SITE_URL = process.env["SITE_URL"] ?? "";
-const OWNER_CHAT_ID = process.env["OWNER_CHAT_ID"] ?? "";
+const ADMIN_PASSWORD = process.env["VITE_ADMIN_PASSWORD"] ?? "";
+
+// /admin yozilganda parol so'raladi — keyingi xabar parol deb hisoblanadi.
+const pendingAdminAuth = new Map<number, true>();
 
 type TelegramUpdate = {
   message?: {
@@ -39,8 +42,8 @@ type TelegramUpdate = {
  *   tugmasi (web_app) yuboriladi — Telegram ichida Mini App (profil sahifasi)
  *   ochiladi, foydalanuvchi hech qayerga o'tib ketmaydi.
  * - /start (oddiy) — tugma/link berilmaydi, faqat saytga yo'naltiruvchi matn.
- * - /admin — faqat egaga (OWNER_CHAT_ID) admin panelni Mini App sifatida
- *   ochadigan tugma yuboriladi.
+ * - /admin — parol so'raladi; to'g'ri bo'lsa admin panelni Mini App sifatida
+ *   ochadigan tugma yuboriladi, noto'g'ri bo'lsa "Xato" deydi.
  * - callback_query order_ready:<id> / order_delivered:<id> — oshpazlar va
  *   yetkazib beruvchilar kanalidagi tugmalar: buyurtma keyingi bosqichga
  *   o'tadi va foydalanuvchiga bildirishnoma boradi.
@@ -90,6 +93,30 @@ export default defineEventHandler(async (event) => {
     const from = body.message?.from;
     const name = from?.first_name ?? from?.username ?? "mehmon";
     const trimmed = text.trim();
+
+    // ── /admin uchun parol kutilmoqda — keyingi xabar parol deb hisoblanadi. ──
+    if (pendingAdminAuth.has(chatId)) {
+      pendingAdminAuth.delete(chatId);
+      const adminUrl = SITE_URL ? `${SITE_URL.replace(/\/+$/, "")}/admin` : "";
+      if (ADMIN_PASSWORD && trimmed === ADMIN_PASSWORD && adminUrl) {
+        await sendMessage(
+          chatId,
+          "✅ Parol to'g'ri! Admin panelni ochish uchun tugmani bosing — hammasi shu yerda ochiladi:",
+          {
+            inline_keyboard: [
+              [{ text: "🛠 Admin panel", web_app: { url: adminUrl } }],
+            ],
+          },
+        );
+      } else {
+        await sendMessage(
+          chatId,
+          "❌ Xato! Parol noto'g'ri. Qayta urinish uchun /admin yozing.",
+        );
+      }
+      return { ok: true };
+    }
+
     const startMatch = trimmed.match(/^\/start(?:\s+connect_([A-Za-z0-9]+))?$/);
 
     if (startMatch) {
@@ -116,31 +143,10 @@ export default defineEventHandler(async (event) => {
         await sendMessage(chatId, messageText);
       }
     } else if (/^\/admin(@\S+)?$/.test(trimmed)) {
-      // Admin panel — faqat egaga (OWNER_CHAT_ID). OWNER_CHAT_ID
-      // o'rnatilmagan bo'lsa (dev rejim), tugma yuboriladi — panelni
-      // parol himoya qiladi.
-      const fromId = body.message?.from?.id;
-      const isOwner =
-        !OWNER_CHAT_ID ||
-        (fromId !== undefined && String(fromId) === String(OWNER_CHAT_ID));
-      const adminUrl = SITE_URL ? `${SITE_URL.replace(/\/+$/, "")}/admin` : "";
-
-      if (isOwner && adminUrl) {
-        await sendMessage(
-          chatId,
-          "🛠 Admin panelni ochish uchun tugmani bosing — hammasi shu yerda ochiladi:",
-          {
-            inline_keyboard: [
-              [{ text: "🛠 Admin panel", web_app: { url: adminUrl } }],
-            ],
-          },
-        );
-      } else {
-        await sendMessage(
-          chatId,
-          "Kechirasiz, bu buyruqdan foydalanish uchun ruxsat yo'q. 🙅",
-        );
-      }
+      // Admin panel — avval parol so'raladi (pendingAdminAuth), to'g'ri
+      // parol kiritilgach tugma yuboriladi. Parol VITE_ADMIN_PASSWORD.
+      pendingAdminAuth.set(chatId, true);
+      await sendMessage(chatId, "🔐 Admin panel uchun parolni kiriting:");
     }
 
     return { ok: true };
