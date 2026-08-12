@@ -189,10 +189,12 @@ export async function notifyOrderReady(
   }
 
   if (notifyTgId) {
-    const userText =
-      order?.mode === "delivery"
-        ? `✅ <b>Ovqatingiz tayyor!</b>\n\nTez orada yetkazib beramiz. 🚚`
-        : `✅ <b>Sizning buyurtmangiz tayyor!</b>\n\nOlib ketishingiz mumkin. 😋`;
+    // Matn rejimga qarab: yetkazib berish — tez orada yetkazamiz,
+    // olib ketish — olib ketishingiz mumkin. (Omborda buyurtma yo'q bo'lsa
+    // ham oshpaz matnidan rejim aniqlanadi.)
+    const userText = isDelivery
+      ? `✅ <b>Ovqatingiz tayyor!</b>\n\nTez orada yetkazib beramiz. 🚚`
+      : `✅ <b>Sizning buyurtmangiz tayyor!</b>\n\nOlib ketishingiz mumkin. 😋`;
     await sendMessage(notifyTgId, userText);
   }
 }
