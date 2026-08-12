@@ -5,6 +5,43 @@ import { useCart } from "@/components/cart-context";
 import { formatSom } from "@/data/menu";
 import { useTelegram } from "@/lib/use-telegram";
 
+/** Telefon raqamni "+998 xx xxx xx xx" formatida avtomatik joylashtiradi. */
+function formatPhone(raw: string) {
+  let digits = raw.replace(/\D/g, "");
+  if (digits.startsWith("998")) digits = digits.slice(3);
+  else if (digits.startsWith("8")) digits = digits.slice(1);
+  digits = digits.slice(0, 9);
+  let result = "+998";
+  if (digits.length > 0) result += ` ${digits.slice(0, 2)}`;
+  if (digits.length > 2) result += ` ${digits.slice(2, 5)}`;
+  if (digits.length > 5) result += ` ${digits.slice(5, 7)}`;
+  if (digits.length > 7) result += ` ${digits.slice(7, 9)}`;
+  return result;
+}
+
+const CUSTOMER_KEY = "janob_customer_info";
+
+function loadCustomer(): { name: string; phone: string } {
+  try {
+    const raw = localStorage.getItem(CUSTOMER_KEY);
+    if (raw) {
+      const data = JSON.parse(raw) as { name?: string; phone?: string };
+      return { name: data.name ?? "", phone: data.phone ?? "" };
+    }
+  } catch {
+    /* ignore */
+  }
+  return { name: "", phone: "" };
+}
+
+function saveCustomer(name: string, phone: string) {
+  try {
+    localStorage.setItem(CUSTOMER_KEY, JSON.stringify({ name, phone }));
+  } catch {
+    /* ignore */
+  }
+}
+
 /**
  * Savat ichidagi kontent (sarlavha + mahsulotlar + rasmiylashtirish formasi).
  * Ikkala joyda ishlatiladi:
@@ -13,26 +50,18 @@ import { useTelegram } from "@/lib/use-telegram";
  */
 export function CartContent({ onClose }: { onClose: () => void }) {
   const { lines, total, count, setQty, remove, clear } = useCart();
-  const [name, setName] = useState("");
-  const [phone, setPhone] = useState("");
+  const initial = loadCustomer();
+  const [name, setName] = useState(initial.name);
+  const [phone, setPhone] = useState(() => formatPhone(initial.phone));
   const [mode, setMode] = useState<"delivery" | "pickup">("delivery");
   const [address, setAddress] = useState("");
   const [formOpen, setFormOpen] = useState(false);
   const { tg } = useTelegram();
 
-  /** Telefon raqamni "+998 xx xxx xx xx" formatida avtomatik joylashtiradi. */
-  const formatPhone = (raw: string) => {
-    let digits = raw.replace(/\D/g, "");
-    if (digits.startsWith("998")) digits = digits.slice(3);
-    else if (digits.startsWith("8")) digits = digits.slice(1);
-    digits = digits.slice(0, 9);
-    let result = "+998";
-    if (digits.length > 0) result += ` ${digits.slice(0, 2)}`;
-    if (digits.length > 2) result += ` ${digits.slice(2, 5)}`;
-    if (digits.length > 5) result += ` ${digits.slice(5, 7)}`;
-    if (digits.length > 7) result += ` ${digits.slice(7, 9)}`;
-    return result;
-  };
+  // Ism va telefon o'zgarganda eslab qolamiz — keyingi safar avtomatik to'ldiriladi.
+  useEffect(() => {
+    saveCustomer(name, phone);
+  }, [name, phone]);
 
   const placeOrder = async () => {
     if (!name.trim()) {
