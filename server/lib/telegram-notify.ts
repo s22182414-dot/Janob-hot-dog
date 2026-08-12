@@ -114,13 +114,23 @@ export async function notifyOrder(order: SavedOrder) {
       `🛒 <b>Yangi buyurtma!</b>\n\n${buildOrderText(order)}`,
     );
   }
+  // Callback data'ga foydalanuvchining Telegram ID'sini ham qo'shamiz —
+  // ombor (KV) o'rnatilmagan bo'lsa ham "Tayyor" bosilganda foydalanuvchiga
+  // bildirishnoma yuborish imkoni bo'ladi.
+  const tgSuffix = order.tgId ? `:${order.tgId}` : "";
+
   if (COOKS_CHAT_ID) {
     await sendMessage(
       Number(COOKS_CHAT_ID),
       `🍳 <b>Yangi buyurtma!</b>\n\n${buildOrderText(order)}`,
       {
         inline_keyboard: [
-          [{ text: "✅ Tayyor", callback_data: `order_ready:${order.id}` }],
+          [
+            {
+              text: "✅ Tayyor",
+              callback_data: `order_ready:${order.id}${tgSuffix}`,
+            },
+          ],
         ],
       },
     );
@@ -134,7 +144,7 @@ export async function notifyOrder(order: SavedOrder) {
           [
             {
               text: "🚚 Yetkazildi",
-              callback_data: `order_delivered:${order.id}`,
+              callback_data: `order_delivered:${order.id}${tgSuffix}`,
             },
           ],
         ],
@@ -149,19 +159,28 @@ export async function notifyOrder(order: SavedOrder) {
  *  - buyurtma holati "ready" ga o'tkaziladi.
  * (Yetkazib beruvchilar kanaliga buyurtma allaqachon yuborilgan.)
  */
-export async function notifyOrderReady(orderId: string) {
+/**
+ * "Tayyor" bosildi. Buyurtma omborda topilmasa ham (KV o'rnatilmagan bo'lsa)
+ * callback data'dagi tgId orqali foydalanuvchiga bildirishnoma yuboriladi.
+ */
+export async function notifyOrderReady(orderId: string, tgId?: number) {
   const order = await getOrderById(orderId);
-  if (!order || order.status === "ready" || order.status === "delivered")
-    return;
+  const notifyTgId = order?.tgId ?? tgId;
 
-  await updateOrderStatus(orderId, "ready");
+  if (order) {
+    // Buyurtma topildi: takroriy bosilgan bo'lsa qayta xabar yuborilmaydi.
+    if (order.status === "ready" || order.status === "delivered") return;
+    await updateOrderStatus(orderId, "ready");
+  } else if (!notifyTgId) {
+    return; // Buyurtma ham, tgId ham yo'q — yuboradigan hech narsa yo'q.
+  }
 
-  if (order.tgId) {
+  if (notifyTgId) {
     const userText =
-      order.mode === "delivery"
+      order?.mode === "delivery"
         ? `✅ <b>Ovqatingiz tayyor!</b>\n\nTez orada yetkazib beramiz. 🚚`
         : `✅ <b>Sizning buyurtmangiz tayyor!</b>\n\nOlib ketishingiz mumkin. 😋`;
-    await sendMessage(order.tgId, userText);
+    await sendMessage(notifyTgId, userText);
   }
 }
 
@@ -169,15 +188,20 @@ export async function notifyOrderReady(orderId: string) {
  * "Yetkazildi" bosildi — foydalanuvchiga yetkazilganlik bildirishnomasi,
  * buyurtma holati "delivered" ga o'tkaziladi.
  */
-export async function notifyOrderDelivered(orderId: string) {
+export async function notifyOrderDelivered(orderId: string, tgId?: number) {
   const order = await getOrderById(orderId);
-  if (!order || order.status === "delivered") return;
+  const notifyTgId = order?.tgId ?? tgId;
 
-  await updateOrderStatus(orderId, "delivered");
+  if (order) {
+    if (order.status === "delivered") return;
+    await updateOrderStatus(orderId, "delivered");
+  } else if (!notifyTgId) {
+    return;
+  }
 
-  if (order.tgId) {
+  if (notifyTgId) {
     await sendMessage(
-      order.tgId,
+      notifyTgId,
       `🚚 <b>Ovqatingiz yetkazildi!</b>\n\nYoqimli ishtaha! 😋`,
     );
   }

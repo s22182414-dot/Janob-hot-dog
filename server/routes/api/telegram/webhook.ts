@@ -53,20 +53,23 @@ export default defineEventHandler(async (event) => {
     const callback = body?.callback_query;
     if (callback?.data && callback.message) {
       await answerCallbackQuery(callback.id);
-      const match = callback.data.match(/^(order_ready|order_delivered):(.+)$/);
+      const match = callback.data.match(
+        /^(order_ready|order_delivered):([^:]+)(?::(\d+))?$/,
+      );
       if (match) {
         const action = match[1] ?? "";
         const orderId = match[2] ?? "";
+        const tgId = match[3] ? Number(match[3]) : undefined;
         const baseText = callback.message.text ?? "";
         if (action === "order_ready") {
-          await notifyOrderReady(orderId);
+          await notifyOrderReady(orderId, tgId);
           await editMessageText(
             callback.message.chat.id,
             callback.message.message_id,
             `${baseText}\n\n✅ Tayyor qilindi`,
           );
         } else {
-          await notifyOrderDelivered(orderId);
+          await notifyOrderDelivered(orderId, tgId);
           await editMessageText(
             callback.message.chat.id,
             callback.message.message_id,
