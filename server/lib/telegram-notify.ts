@@ -102,8 +102,10 @@ export function buildOrderText(order: SavedOrder): string {
 /**
  * Yangi buyurtma:
  *  - egasiga (OWNER_CHAT_ID) oddiy xabar,
- *  - oshpazlar kanaliga (COOKS_CHAT_ID) "✅ Tayyor" tugmasi bilan.
- * Tugma bosilganda order_ready callback'ini webhook qabul qiladi.
+ *  - oshpazlar kanaliga (COOKS_CHAT_ID) "✅ Tayyor" tugmasi bilan
+ *    (yetkazib berish ham, olib ketish ham — bitta kanal),
+ *  - yetkazib berish bo'lsa — bir vaqtning o'zida yetkazib beruvchilar
+ *    kanaliga (COURIERS_CHAT_ID) "🚚 Yetkazildi" tugmasi bilan.
  */
 export async function notifyOrder(order: SavedOrder) {
   if (OWNER_CHAT_ID) {
@@ -123,26 +125,10 @@ export async function notifyOrder(order: SavedOrder) {
       },
     );
   }
-}
-
-/**
- * "Tayyor" bosildi:
- *  - yetkazib berish bo'lsa — buyurtma yetkazib beruvchilar kanaliga
- *    (COURIERS_CHAT_ID) "🚚 Yetkazildi" tugmasi bilan tashlanadi,
- *  - foydalanuvchiga (Telegram ID) "ovqatingiz tayyor" bildirishnomasi,
- *  - buyurtma holati "ready" ga o'tkaziladi.
- */
-export async function notifyOrderReady(orderId: string) {
-  const order = await getOrderById(orderId);
-  if (!order || order.status === "ready" || order.status === "delivered")
-    return;
-
-  await updateOrderStatus(orderId, "ready");
-
   if (order.mode === "delivery" && COURIERS_CHAT_ID) {
     await sendMessage(
       Number(COURIERS_CHAT_ID),
-      `🚚 <b>Yetkazish uchun tayyor!</b>\n\n${buildOrderText(order)}`,
+      `🚚 <b>Yetkazish uchun buyurtma!</b>\n\n${buildOrderText(order)}`,
       {
         inline_keyboard: [
           [
@@ -155,6 +141,20 @@ export async function notifyOrderReady(orderId: string) {
       },
     );
   }
+}
+
+/**
+ * "Tayyor" bosildi:
+ *  - foydalanuvchiga (Telegram ID) "ovqatingiz tayyor" bildirishnomasi,
+ *  - buyurtma holati "ready" ga o'tkaziladi.
+ * (Yetkazib beruvchilar kanaliga buyurtma allaqachon yuborilgan.)
+ */
+export async function notifyOrderReady(orderId: string) {
+  const order = await getOrderById(orderId);
+  if (!order || order.status === "ready" || order.status === "delivered")
+    return;
+
+  await updateOrderStatus(orderId, "ready");
 
   if (order.tgId) {
     const userText =
